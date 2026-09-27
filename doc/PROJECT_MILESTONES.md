@@ -337,6 +337,7 @@ Shared rows count for each assigned member.
 | 9/25/2026 | GitHub Actions CI + branch protection on `main` | Laroco | #6 |
 | 9/25/2026 | Patched vulnerable build dependencies | Laroco | #6 |
 | 9/24/2026 | How to run the system guide (`doc/Instruction_On_How_To_Run.md`) | Bansag | #1, #5 |
+| 9/28/2026 | Enabled CI checks for all branches | Laroco | — |
 
 ## Open questions
 

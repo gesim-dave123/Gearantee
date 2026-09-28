@@ -67,9 +67,8 @@ jobs:
             exit 1
           }
 
-      # Enable when a test project exists (for example, ASI.Basecode.Tests).
-      # - name: Test
-      #   run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
 
   codeql:
     name: CodeQL security scan

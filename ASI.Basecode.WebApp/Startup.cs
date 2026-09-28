@@ -1,7 +1,9 @@
 using ASI.Basecode.Data;
 using ASI.Basecode.WebApp.Extensions.Configuration;
+using ASI.Basecode.WebApp.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -9,7 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System;
 using System.IO;
+using System.Threading.RateLimiting;
 
 namespace ASI.Basecode.WebApp
 {
@@ -39,6 +43,33 @@ namespace ASI.Basecode.WebApp
             });
 
             ConfigureIdentityAndAuthorization();
+
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy(
+                    PasswordResetOtpService.RequestRateLimitPolicyName,
+                    context => RateLimitPartition.GetFixedWindowLimiter(
+                        GetClientIp(context),
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 5,
+                            QueueLimit = 0,
+                            Window = TimeSpan.FromMinutes(1)
+                        }));
+                options.AddPolicy(
+                    PasswordResetOtpService.VerifyRateLimitPolicyName,
+                    context => RateLimitPartition.GetFixedWindowLimiter(
+                        GetClientIp(context),
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 20,
+                            QueueLimit = 0,
+                            Window = TimeSpan.FromMinutes(1)
+                        }));
+            });
 
             services.AddControllersWithViews()
                 .AddRazorRuntimeCompilation();
@@ -86,8 +117,14 @@ namespace ASI.Basecode.WebApp
 
             _app.UseSession();
             _app.UseRouting();
+            _app.UseRateLimiter();
             _app.UseAuthentication();
             _app.UseAuthorization();
+        }
+
+        private static string GetClientIp(HttpContext context)
+        {
+            return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         }
     }
 }

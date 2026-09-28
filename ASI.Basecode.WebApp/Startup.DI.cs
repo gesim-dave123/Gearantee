@@ -28,6 +28,8 @@ namespace ASI.Basecode.WebApp
                     client.BaseAddress = new Uri(
                         options.BaseUrl.TrimEnd('/') + "/");
                 });
+            _services.AddScoped<IPasswordResetOtpStore, IdentityPasswordResetOtpStore>();
+            _services.AddScoped<PasswordResetOtpService>();
         }
     }
 }

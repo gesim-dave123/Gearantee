@@ -106,7 +106,17 @@ From the repository root:
 dotnet build .\ASI.Basecode.sln
 ```
 
-## 6. Run the website
+## 6. Run the automated tests
+
+Run the OTP state and concurrency regression tests before opening a pull request:
+
+```powershell
+dotnet test .\ASI.Basecode.sln
+```
+
+The tests cover OTP state persistence, the five-attempt limit under concurrent requests, and single-use consumption.
+
+## 7. Run the website
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"

@@ -34,7 +34,7 @@ namespace ASI.Basecode.WebApp
                 .AddDefaultTokenProviders();
 
             _services.Configure<DataProtectionTokenProviderOptions>(options =>
-                options.TokenLifespan = TimeSpan.FromHours(1));
+                options.TokenLifespan = TimeSpan.FromMinutes(15));
 
             _services.Configure<SecurityStampValidatorOptions>(options =>
                 options.ValidationInterval = TimeSpan.FromMinutes(1));

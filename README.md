@@ -121,6 +121,7 @@ Bootstrap references and Bootstrap-only view classes should be removed only afte
 ```powershell
 dotnet restore
 dotnet build
+dotnet test .\ASI.Basecode.sln
 dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
 ```
 

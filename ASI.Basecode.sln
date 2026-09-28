@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASI.Basecode.Resources", "ASI.Basecode.Resources\ASI.Basecode.Resources.csproj", "{ED0C96A6-749E-413B-BF4D-8E405BEB172E}"
 EndProject
+Project("{9A19103F-16F7-466B-BE54-9A1E7A4F7556}") = "ASI.Basecode.Tests", "ASI.Basecode.Tests\ASI.Basecode.Tests.csproj", "{B86D5C5E-8C5E-4D53-9A07-7E6E6F3E9AF4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,10 @@ Global
 		{ED0C96A6-749E-413B-BF4D-8E405BEB172E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED0C96A6-749E-413B-BF4D-8E405BEB172E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED0C96A6-749E-413B-BF4D-8E405BEB172E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B86D5C5E-8C5E-4D53-9A07-7E6E6F3E9AF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B86D5C5E-8C5E-4D53-9A07-7E6E6F3E9AF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B86D5C5E-8C5E-4D53-9A07-7E6E6F3E9AF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B86D5C5E-8C5E-4D53-9A07-7E6E6F3E9AF4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

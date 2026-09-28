@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -29,11 +30,10 @@ namespace ASI.Basecode.WebApp.Controllers
         private readonly AsiBasecodeDBContext _dbContext;
         private readonly IBrevoEmailSender _emailSender;
         private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+        private readonly PasswordResetOtpService _passwordResetOtpService;
 
-        private const string PasswordResetOtpProvider = "Gearantee";
-        private const string PasswordResetOtpName = "PasswordResetOtp";
-        private const int PasswordResetOtpLifetimeMinutes = 10;
-        private const int MaximumPasswordResetOtpAttempts = 5;
+        private const string PasswordResetGenericMessage =
+            "The verification code is invalid or has expired.";
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -42,6 +42,7 @@ namespace ASI.Basecode.WebApp.Controllers
             AsiBasecodeDBContext dbContext,
             IBrevoEmailSender emailSender,
             IPasswordHasher<ApplicationUser> passwordHasher,
+            PasswordResetOtpService passwordResetOtpService,
             IHttpContextAccessor httpContextAccessor,
             ILoggerFactory loggerFactory,
             IConfiguration configuration)
@@ -56,6 +57,7 @@ namespace ASI.Basecode.WebApp.Controllers
             _dbContext = dbContext;
             _emailSender = emailSender;
             _passwordHasher = passwordHasher;
+            _passwordResetOtpService = passwordResetOtpService;
         }
 
         [HttpGet]
@@ -81,6 +83,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(PasswordResetOtpService.RequestRateLimitPolicyName)]
         public async Task<IActionResult> ForgotPassword(
             ForgotPasswordViewModel model)
         {
@@ -93,51 +96,66 @@ namespace ASI.Basecode.WebApp.Controllers
             var user = await _userManager.FindByEmailAsync(email);
             if (user != null && user.IsActive)
             {
-                var otp = RandomNumberGenerator
-                    .GetInt32(100000, 1000000)
-                    .ToString("D6", CultureInfo.InvariantCulture);
-                var expiresAt = DateTimeOffset.UtcNow
-                    .AddMinutes(PasswordResetOtpLifetimeMinutes);
-                var otpHash = _passwordHasher.HashPassword(user, otp);
-                var storedOtp = string.Join(
-                    "|",
-                    expiresAt.ToUnixTimeSeconds()
-                        .ToString(CultureInfo.InvariantCulture),
-                    0.ToString(CultureInfo.InvariantCulture),
-                    otpHash);
-
-                await _userManager.SetAuthenticationTokenAsync(
-                    user,
-                    PasswordResetOtpProvider,
-                    PasswordResetOtpName,
-                    storedOtp);
-
-                try
+                var now = DateTimeOffset.UtcNow;
+                var issuance = await _passwordResetOtpService
+                    .TryReserveIssuanceAsync(user, now);
+                if (issuance.IsReserved)
                 {
-                    await _emailSender.SendPasswordResetOtpAsync(
-                        user.Email ?? email,
-                        $"{user.FirstName} {user.LastName}".Trim(),
-                        otp);
-                }
-                catch (Exception exception)
-                {
-                    await _userManager.RemoveAuthenticationTokenAsync(
+                    var otp = RandomNumberGenerator
+                        .GetInt32(100000, 1000000)
+                        .ToString("D6", CultureInfo.InvariantCulture);
+                    var expiresAt = now.AddMinutes(
+                        PasswordResetOtpService.LifetimeMinutes);
+                    var otpHash = _passwordHasher.HashPassword(user, otp);
+                    var state = new PasswordResetOtpState(
+                        expiresAt,
+                        0,
+                        issuance.WindowStartAt,
+                        issuance.IssuanceCount,
+                        now,
+                        otpHash);
+                    var storedOtp = state.Serialize();
+                    var storeResult = await _passwordResetOtpService.SetAsync(
                         user,
-                        PasswordResetOtpProvider,
-                        PasswordResetOtpName);
-                    _logger.LogError(
-                        exception,
-                        "Unable to send a password reset OTP for user {UserCode}.",
-                        user.UserCode);
-                    ModelState.AddModelError(
-                        string.Empty,
-                        "We could not send the reset email right now. Please try again later.");
-                    return View(model);
-                }
+                        storedOtp);
 
-                _logger.LogInformation(
-                    "Password reset OTP sent for user {UserCode}.",
-                    user.UserCode);
+                    if (!storeResult.Succeeded)
+                    {
+                        _logger.LogWarning(
+                            "Unable to store a password reset OTP for user {UserCode}: {Errors}",
+                            user.UserCode,
+                            string.Join(", ", storeResult.Errors.Select(error => error.Code)));
+                    }
+                    else
+                    {
+                        try
+                        {
+                            await _emailSender.SendPasswordResetOtpAsync(
+                                user.Email ?? email,
+                                $"{user.FirstName} {user.LastName}".Trim(),
+                                otp);
+                            _logger.LogInformation(
+                                "Password reset OTP sent for user {UserCode}.",
+                                user.UserCode);
+                        }
+                        catch (Exception exception)
+                        {
+                            if (!await _passwordResetOtpService.TryConsumeAsync(
+                                    user.Id,
+                                    storedOtp))
+                            {
+                                _logger.LogWarning(
+                                    "The failed password reset email cleanup did not consume the current OTP for user {UserCode}.",
+                                    user.UserCode);
+                            }
+
+                            _logger.LogError(
+                                exception,
+                                "Unable to send a password reset OTP for user {UserCode}.",
+                                user.UserCode);
+                        }
+                    }
+                }
             }
 
             TempData["PasswordResetEmail"] = email;
@@ -160,6 +178,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(PasswordResetOtpService.VerifyRateLimitPolicyName)]
         public async Task<IActionResult> VerifyPasswordResetOtp(
             VerifyPasswordResetOtpViewModel model)
         {
@@ -174,92 +193,75 @@ namespace ASI.Basecode.WebApp.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "The verification code is invalid or has expired.");
+                    PasswordResetGenericMessage);
                 return View(nameof(ForgotPasswordCheckInbox), model);
             }
 
-            var storedOtp = await _userManager.GetAuthenticationTokenAsync(
-                user,
-                PasswordResetOtpProvider,
-                PasswordResetOtpName);
-            if (!TryParsePasswordResetOtp(
-                    storedOtp,
-                    out var expiresAt,
-                    out var attempts,
-                    out var otpHash) ||
-                expiresAt <= DateTimeOffset.UtcNow)
+            var reservation = await _passwordResetOtpService
+                .TryReserveAttemptAsync(user.Id, DateTimeOffset.UtcNow);
+            if (!reservation.IsReserved)
             {
-                await _userManager.RemoveAuthenticationTokenAsync(
-                    user,
-                    PasswordResetOtpProvider,
-                    PasswordResetOtpName);
                 ModelState.AddModelError(
                     string.Empty,
-                    "The verification code is invalid or has expired.");
+                    reservation.Status == PasswordResetOtpAttemptStatus.TooManyAttempts
+                        ? "Too many attempts. Request a new verification code."
+                        : PasswordResetGenericMessage);
                 return View(nameof(ForgotPasswordCheckInbox), model);
             }
 
             var verificationResult = _passwordHasher.VerifyHashedPassword(
                 user,
-                otpHash,
+                reservation.State.OtpHash,
                 model.Otp.Trim());
             if (verificationResult == PasswordVerificationResult.Failed)
             {
-                attempts++;
-                if (attempts >= MaximumPasswordResetOtpAttempts)
+                if (reservation.State.Attempts >=
+                    PasswordResetOtpService.MaximumAttempts)
                 {
-                    await _userManager.RemoveAuthenticationTokenAsync(
-                        user,
-                        PasswordResetOtpProvider,
-                        PasswordResetOtpName);
-                }
-                else
-                {
-                    await _userManager.SetAuthenticationTokenAsync(
-                        user,
-                        PasswordResetOtpProvider,
-                        PasswordResetOtpName,
-                        string.Join(
-                            "|",
-                            expiresAt.ToUnixTimeSeconds()
-                                .ToString(CultureInfo.InvariantCulture),
-                            attempts.ToString(CultureInfo.InvariantCulture),
-                            otpHash));
+                    if (!await _passwordResetOtpService.TryConsumeAsync(
+                            user.Id,
+                            reservation.ReservedValue))
+                    {
+                        _logger.LogWarning(
+                            "Unable to consume an exhausted password reset OTP for user {UserCode}.",
+                            user.UserCode);
+                    }
                 }
 
                 ModelState.AddModelError(
                     string.Empty,
-                    attempts >= MaximumPasswordResetOtpAttempts
+                    reservation.State.Attempts >=
+                        PasswordResetOtpService.MaximumAttempts
                         ? "Too many attempts. Request a new verification code."
-                        : "The verification code is invalid.");
+                        : PasswordResetGenericMessage);
                 return View(nameof(ForgotPasswordCheckInbox), model);
             }
 
-            await _userManager.RemoveAuthenticationTokenAsync(
-                user,
-                PasswordResetOtpProvider,
-                PasswordResetOtpName);
+            if (!await _passwordResetOtpService.TryConsumeAsync(
+                    user.Id,
+                    reservation.ReservedValue))
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    PasswordResetGenericMessage);
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
 
             var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-            return RedirectToAction(
+            return View(
                 nameof(ResetPassword),
-                new { userId = user.Id, token = resetToken });
+                new ResetPasswordViewModel
+                {
+                    UserId = user.Id,
+                    Token = resetToken
+                });
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult ResetPassword(string userId, string token)
+        public IActionResult ResetPassword()
         {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
-            {
-                return RedirectToAction(nameof(ForgotPassword));
-            }
-
-            return View(new ResetPasswordViewModel
-            {
-                UserId = userId,
-                Token = token
-            });
+            return RedirectToAction(nameof(ForgotPassword));
         }
 
         [HttpPost]
@@ -277,7 +279,7 @@ namespace ASI.Basecode.WebApp.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "This reset link is invalid or has expired.");
+                    "This password-reset session is invalid or has expired.");
                 return View(model);
             }
 
@@ -289,6 +291,25 @@ namespace ASI.Basecode.WebApp.Controllers
             {
                 AddIdentityErrors(result);
                 return View(model);
+            }
+
+            var resetFailedAccessResult =
+                await _userManager.ResetAccessFailedCountAsync(user);
+            if (!resetFailedAccessResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Password reset succeeded but failed to clear the failed-login count for user {UserCode}.",
+                    user.UserCode);
+            }
+
+            var clearLockoutResult = await _userManager.SetLockoutEndDateAsync(
+                user,
+                null);
+            if (!clearLockoutResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Password reset succeeded but failed to clear lockout for user {UserCode}.",
+                    user.UserCode);
             }
 
             TempData["SuccessMessage"] =
@@ -473,38 +494,5 @@ namespace ASI.Basecode.WebApp.Controllers
             }
         }
 
-        private static bool TryParsePasswordResetOtp(
-            string storedOtp,
-            out DateTimeOffset expiresAt,
-            out int attempts,
-            out string otpHash)
-        {
-            expiresAt = default;
-            attempts = 0;
-            otpHash = null;
-
-            var parts = storedOtp?.Split('|', 3);
-            if (parts == null ||
-                parts.Length != 3 ||
-                !long.TryParse(
-                    parts[0],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var expirySeconds) ||
-                !int.TryParse(
-                    parts[1],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out attempts) ||
-                attempts < 0 ||
-                string.IsNullOrWhiteSpace(parts[2]))
-            {
-                return false;
-            }
-
-            expiresAt = DateTimeOffset.FromUnixTimeSeconds(expirySeconds);
-            otpHash = parts[2];
-            return true;
-        }
     }
 }

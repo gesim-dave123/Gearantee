@@ -2,7 +2,7 @@
 
 ## Campus Equipment Borrowing & Reservation System
 
-This plan covers the complete first version of the system using ASP.NET Core MVC with Razor Views, Microsoft SQL Server, Entity Framework Core's SQL Server provider, ASP.NET Core Identity, Tailwind CSS, MailKit, and school SMTP.
+This plan covers the complete first version of the system using ASP.NET Core MVC with Razor Views, Microsoft SQL Server, Entity Framework Core's SQL Server provider, ASP.NET Core Identity, Tailwind CSS, and Brevo transactional email for password-reset OTP delivery.
 
 **Tracking:** change `[ ]` to `[x]` as each task is completed.
 
@@ -31,9 +31,9 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 2 |
-| In Review | 0 |
+| In Review | 4 |
 | In Progress | 0 |
-| Not Started | 42 |
+| Not Started | 38 |
 | Blocked | 0 |
 
 ### By member
@@ -60,10 +60,10 @@ Shared rows count for each assigned member.
 | 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
 | 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
 | **8.00** | **Authentication: Password Reset Request** | | | | | | | | | |
-| 9.00 | Request Password Reset Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 10.00 | Receive OTP in Email | Bansag | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 11.00 | OTP Verification Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 12.00 | Set New Password | Bansag | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
+| 9.00 | Request Password Reset Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
+| 10.00 | Receive OTP in Email | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
+| 11.00 | OTP Verification Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
+| 12.00 | Set New Password | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | **13.00** | **Administration: User and Role Management** | | | | | | | | | |
 | 14.00 | View User Accounts Page | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
 | 15.00 | Create Accounts | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
@@ -167,7 +167,7 @@ Shared rows count for each assigned member.
 - [x] Build Identity-backed registration, login, and logout pages.
 - [ ] Build role-based dashboards and navigation.
 - [ ] Add account activation/deactivation behavior.
-- [ ] Implement Forgot Password using Identity reset tokens, MailKit, and school SMTP.
+- [ ] Implement Forgot Password using Identity reset tokens, Brevo OTP delivery, and verified sender secrets.
 - [x] Apply password policy, sign-in lockout, HTTPS redirect, and global authorization rules; apply per-page permission rules as each feature lands (PR #6).
 
 ### Completion criteria
@@ -175,7 +175,7 @@ Shared rows count for each assigned member.
 - Users can log in and log out securely.
 - Borrowers, custodians, and administrators land on the correct dashboard.
 - Unauthorized pages/actions are blocked.
-- An active user can reset their password through an expiring email reset link.
+- An active user can reset their password through an expiring six-digit email OTP and a protected reset form.
 
 ---
 
@@ -315,7 +315,7 @@ Shared rows count for each assigned member.
 ### Tasks
 
 - [ ] Configure the production SQL Server database and run migrations through a controlled deployment process.
-- [ ] Configure production environment variables, SMTP credentials, HTTPS certificate, and application URL.
+- [ ] Configure production environment variables, Brevo credentials, HTTPS certificate, and application URL.
 - [ ] Deploy to the approved IIS server or Azure App Service environment.
 - [ ] Create the initial administrator account securely.
 - [ ] Configure database backup and restore procedures.
@@ -326,7 +326,7 @@ Shared rows count for each assigned member.
 ### Completion criteria
 
 - The production website is reachable over HTTPS.
-- Password-reset email works through the approved school SMTP server.
+- Password-reset OTP email works through Brevo using a verified sender.
 - The school administrator can manage users, equipment, and transactions.
 - Backup and recovery responsibilities are defined.
 
@@ -340,7 +340,7 @@ Shared rows count for each assigned member.
 
 ## Open questions
 
-- **OTP vs reset link (WBS 10.00–11.00).** The WBS says “Receive OTP in Email / OTP Verification Page,” but `Workflow.md` and `PROJECT_DOCUMENTATION.md` describe an **Identity reset link**. Identity can do either without a custom table: a 6-digit code can come from the email token provider, and a link can come from `GeneratePasswordResetTokenAsync`. Bansag decides, then the documentation is aligned.
+- **OTP vs reset link (WBS 10.00–11.00).** Resolved for PR #19: the system uses a six-digit OTP delivered through Brevo, stores only its hash in `AspNetUserTokens`, and creates the protected Identity reset token only after successful OTP verification.
 - **Milestone 8 (Deployment)** has no WBS rows. Decide whether it is in scope for this term.
 
 ## Suggested Implementation Order
@@ -364,3 +364,4 @@ The first version is complete when borrowers can securely reserve one available 
 | Date | Change | By |
 | --- | --- | --- |
 | 9/25/2026 | Added WBS Feature Tracker; marked 1.00 and 3.00 Done | Laroco |
+| 9/28/2026 | Moved WBS 9.00–12.00 to In Review for PR #19 and aligned password-reset documentation with the OTP/Brevo implementation | Bansag |

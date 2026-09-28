@@ -2,9 +2,11 @@ name: Gearantee CI
 
 on:
   pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feature/**"
+      - "Documentation/**"
   workflow_dispatch:
 
 # Cancel an older run when new commits are pushed to the same PR or branch.
@@ -67,9 +69,8 @@ jobs:
             exit 1
           }
 
-      # Enable when a test project exists (for example, ASI.Basecode.Tests).
-      # - name: Test
-      #   run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
 
   codeql:
     name: CodeQL security scan

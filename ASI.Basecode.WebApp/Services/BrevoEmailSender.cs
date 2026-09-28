@@ -96,12 +96,9 @@ namespace ASI.Basecode.WebApp.Services
                 return;
             }
 
-            var responseBody = await response.Content.ReadAsStringAsync(
-                cancellationToken);
             _logger.LogError(
-                "Brevo password-reset email failed with status {StatusCode}: {ResponseBody}",
-                (int)response.StatusCode,
-                responseBody);
+                "Brevo password-reset email failed with status {StatusCode}.",
+                (int)response.StatusCode);
 
             throw new HttpRequestException(
                 $"Brevo email request failed with status code {(int)response.StatusCode}.");

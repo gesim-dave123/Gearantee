@@ -2,11 +2,9 @@ name: Gearantee CI
 
 on:
   pull_request:
+    branches: ['**']
   push:
-    branches:
-      - main
-      - "feature/**"
-      - "Documentation/**"
+    branches: ['**']
   workflow_dispatch:
 
 # Cancel an older run when new commits are pushed to the same PR or branch.

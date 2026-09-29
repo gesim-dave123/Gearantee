@@ -1,0 +1,98 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css" source(none);
+
+@source "../../Views/**/*.cshtml";
+@source "../js/**/*.js";
+
+@theme {
+  --color-primary: #5980A6;
+  --color-primary-strong: #4A6F94;
+  --color-tint: #D6EBFF;
+  --color-tint-soft: #EBF5FF;
+  --color-ink: #000000;
+  --color-gray-50: #F2F2F3;
+  --color-gray-100: #E9E9EA;
+  --color-gray-200: #D9D9DC;
+  --color-gray-500: #6B6E73;
+  --color-gray-700: #3A3C40;
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", ui-sans-serif, sans-serif;
+  --radius-*: initial;
+}
+
+@layer base {
+  *, ::before, ::after { box-sizing: border-box; }
+  html { min-width: 320px; background: #F2F2F3; }
+  body, h1, h2, h3, p, figure, blockquote, dl, dd { margin: 0; }
+  img, svg { display: block; max-width: 100%; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  ul, ol { margin: 0; padding: 0; list-style: none; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid #4A6F94; outline-offset: 3px; }
+}
+
+@layer components {
+  .eyebrow { @apply font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-gray-500; }
+  .btn-primary { @apply inline-flex items-center justify-center bg-primary-strong px-4 py-2 font-display text-[13px] font-semibold uppercase tracking-wide text-white hover:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; }
+  .item-code { @apply font-sans text-[11px] font-medium tracking-[0.12em] text-primary-strong; }
+  .input { @apply w-full border border-gray-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-tint; }
+  .input-validation-error { @apply border-ink; }
+  .field-validation-error { @apply mt-1 block text-xs font-medium text-ink; }
+  .field-validation-valid, .validation-summary-valid { @apply hidden; }
+  .validation-summary-errors { @apply mb-4 border-l-4 border-ink bg-white px-4 py-3 text-sm; }
+  .nav-item { @apply flex min-h-10 items-center gap-3 px-3 py-2 text-sm text-gray-700; }
+  .nav-item-active { @apply bg-primary text-white; }
+  .nav-item-disabled { @apply cursor-default text-gray-700; }
+  .soon-tag { @apply inline-flex items-center border border-gray-200 px-1.5 py-0.5 font-sans text-[9px] font-medium uppercase tracking-[0.1em] text-gray-500; }
+  .role-switch { @apply inline-flex min-w-10 items-center justify-center border border-gray-200 bg-white px-2 py-1 font-display text-xs font-semibold text-gray-700 hover:border-primary hover:text-primary-strong; }
+  .login-page { @apply grid min-h-screen bg-white lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]; }
+  .login-story { @apply flex flex-col justify-between bg-primary px-6 py-8 text-white sm:px-10 lg:px-14 lg:py-12; }
+  .login-story-mark { @apply inline-flex w-fit items-center bg-white p-3; }
+  .login-story-logo { @apply block h-auto w-56 max-w-full; }
+  .login-story-content { @apply mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center py-12; }
+  .login-story-copy h1 { @apply font-display text-5xl font-semibold leading-[0.98] sm:text-6xl; }
+  .login-story-copy p { @apply mt-5 max-w-lg text-sm leading-6 text-white/90; }
+  .login-stats { @apply mt-12 grid max-w-md grid-cols-3 border-t border-white/30 pt-5; }
+  .login-stat { @apply flex flex-col gap-1; }
+  .login-stat strong { @apply font-display text-3xl font-semibold tabular-nums; }
+  .login-stat span { @apply text-xs text-white/80; }
+  .login-form-shell { @apply flex min-h-screen items-center justify-center px-5 py-10 sm:px-10; }
+  .login-panel { @apply w-full max-w-lg; }
+  .login-panel h2 { @apply font-display text-4xl font-semibold text-ink; }
+  .login-intro { @apply mb-8 mt-2 text-sm leading-6 text-gray-500; }
+  .login-field { @apply mb-5; }
+  .login-field label { @apply mb-1.5 block text-sm font-medium text-gray-700; }
+  .login-password-wrap { @apply relative; }
+  .login-password-wrap .input { @apply pr-16; }
+  .login-password-toggle { @apply absolute inset-y-0 right-3 text-xs font-semibold text-primary-strong underline underline-offset-2; }
+  .login-options { @apply mb-6 flex flex-wrap items-center justify-between gap-3 text-sm; }
+  .login-remember { @apply inline-flex items-center gap-2 text-gray-700; }
+  .login-remember input { @apply size-4 accent-primary-strong; }
+  .login-options a, .login-register a, .forgot-back, .forgot-check-back { @apply font-semibold text-primary-strong underline underline-offset-4; }
+  .login-register { @apply mt-6 text-center text-sm text-gray-500; }
+  .forgot-password-page .login-story { @apply bg-primary; }
+  .forgot-panel { @apply max-w-xl; }
+  .forgot-back { @apply mb-6 inline-flex text-sm; }
+  .forgot-intro { @apply mb-7; }
+  .forgot-message { @apply mb-5 border-l-4 border-primary bg-tint-soft px-4 py-3 text-sm text-gray-700; }
+  .forgot-note, .forgot-check-expiry { @apply mt-5 text-xs leading-5 text-gray-500; }
+  .forgot-check-panel { @apply max-w-lg; }
+  .forgot-inbox-icon { @apply mb-5 flex size-12 items-center justify-center border border-primary text-primary-strong; }
+  .forgot-inbox-icon svg { @apply size-6 fill-none stroke-current stroke-2; }
+  .forgot-check-copy { @apply my-4 text-sm leading-6 text-gray-700; }
+  .forgot-check-actions { @apply mt-5 flex items-center justify-between gap-4; }
+  .forgot-check-resend { @apply text-sm font-semibold text-primary-strong underline underline-offset-4; }
+  .register-page { @apply min-h-screen bg-gray-50 px-4 py-8 sm:px-8 lg:px-12; }
+  .register-card { @apply mx-auto max-w-4xl bg-white p-5 sm:p-8 lg:p-10; }
+  .register-card h1 { @apply mt-6 font-display text-3xl font-semibold text-ink; }
+  .register-card .field-label { @apply mb-1.5 block text-sm font-medium text-gray-700; }
+  .error-card { @apply mx-auto max-w-2xl border-l-4 border-ink bg-white p-6 sm:p-10; }
+}
+
+@media (max-width: 1023px) {
+  .login-page { grid-template-columns: 1fr; }
+  .login-story { min-height: 260px; }
+  .login-story-content { display: none; }
+  .login-form-shell { min-height: auto; }
+}

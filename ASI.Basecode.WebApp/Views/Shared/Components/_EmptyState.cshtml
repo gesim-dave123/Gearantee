@@ -1,0 +1,16 @@
+@model ASI.Basecode.WebApp.Models.Dashboard.EmptyStateModel
+<div class="border-l-2 border-gray-200 py-2 pl-4">
+    <p class="font-display text-lg font-semibold text-ink">@Model.Heading</p>
+    <p class="mt-1 text-sm leading-6 text-gray-500">@Model.Message</p>
+    @if (!string.IsNullOrWhiteSpace(Model.LinkText))
+    {
+        if (Model.LinkAvailable)
+        {
+            <a href="@Model.Href" class="mt-3 inline-block text-sm font-semibold text-primary-strong underline underline-offset-4">@Model.LinkText</a>
+        }
+        else
+        {
+            <span class="mt-3 inline-flex items-center gap-2 text-sm text-gray-500">@Model.LinkText <span class="soon-tag">Soon</span></span>
+        }
+    }
+</div>

@@ -1,0 +1,85 @@
+@model ASI.Basecode.Services.ServiceModels.Dashboard.AdministratorDashboardModel
+@using ASI.Basecode.WebApp.Models.Dashboard
+@using System.Globalization
+
+<section class="mb-9 grid grid-cols-2 gap-x-5 gap-y-6 xl:grid-cols-4 xl:gap-x-8" aria-label="System summary">
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Equipment items", Value = Model.TotalItems, Status = "Active", Caption = "Non-archived inventory" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Active categories", Value = Model.ActiveCategories, Status = "Eligible", Caption = "Categories available to the system" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Active loans", Value = Model.ActiveLoanCount, Status = "Borrowed", Caption = "Currently released equipment" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Under maintenance", Value = Model.UnderMaintenanceCount, Status = "Under Maintenance", Caption = "Items currently unavailable for lending" })" />
+</section>
+
+<div class="grid gap-10 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+    <section aria-labelledby="inventory-heading">
+        <div class="mb-4 border-b border-gray-200 pb-3"><p class="eyebrow">Inventory mix</p><h2 id="inventory-heading" class="font-display text-xl font-semibold text-ink">Equipment by category</h2></div>
+        @if (Model.InventoryByCategory.Count == 0)
+        {
+            <partial name="Components/_EmptyState" model="@(new EmptyStateModel { Heading = "No active categories", Message = "Add active equipment categories to see inventory distribution." })" />
+        }
+        else
+        {
+            <div class="space-y-6">
+                @foreach (var category in Model.InventoryByCategory)
+                {
+                    var total = category.Total;
+                    var availablePercent = total == 0 ? 0 : Math.Clamp(category.Available * 100d / total, 0, 100);
+                    var reservedPercent = total == 0 ? 0 : Math.Clamp(category.Reserved * 100d / total, 0, 100);
+                    var borrowedPercent = total == 0 ? 0 : Math.Clamp(category.Borrowed * 100d / total, 0, 100);
+                    var maintenancePercent = total == 0 ? 0 : Math.Clamp(category.Maintenance * 100d / total, 0, 100);
+                    var unavailablePercent = total == 0 ? 0 : Math.Clamp(category.Unavailable * 100d / total, 0, 100);
+                    <div>
+                        <div class="mb-2 flex items-baseline justify-between gap-3"><h3 class="font-display text-lg font-semibold text-ink">@category.Name</h3><span class="text-xs tabular-nums text-gray-500">@total item(s)</span></div>
+                        <div class="flex h-3 w-full overflow-hidden bg-gray-200" role="img" aria-label="@category.Name: @category.Available available, @category.Reserved reserved, @category.Borrowed borrowed, @category.Maintenance under maintenance, @category.Unavailable unavailable">
+                            <span class="h-full bg-white" style="width:@(availablePercent.ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                            <span class="h-full bg-tint" style="width:@(reservedPercent.ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                            <span class="h-full bg-primary" style="width:@(borrowedPercent.ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                            <span class="h-full bg-gray-500" style="width:@(maintenancePercent.ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                            <span class="h-full bg-ink" style="width:@(unavailablePercent.ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">
+                            <span>Available <strong class="font-semibold text-gray-700">@category.Available</strong></span><span>Reserved <strong class="font-semibold text-gray-700">@category.Reserved</strong></span><span>Borrowed <strong class="font-semibold text-gray-700">@category.Borrowed</strong></span><span>Maintenance <strong class="font-semibold text-gray-700">@category.Maintenance</strong></span><span>Unavailable <strong class="font-semibold text-gray-700">@category.Unavailable</strong></span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <aside class="space-y-10">
+        <section aria-labelledby="attention-heading">
+            <div class="mb-4 border-b border-gray-200 pb-3"><p class="eyebrow">System alerts</p><h2 id="attention-heading" class="font-display text-xl font-semibold text-ink">Needs attention</h2></div>
+            @if (Model.NeedsAttention.Count == 0)
+            {
+                <partial name="Components/_EmptyState" model="@(new EmptyStateModel { Heading = "Nothing needs attention", Message = "Overdue loans, damaged returns, and categories with no spare items will be listed here." })" />
+            }
+            else
+            {
+                <ul class="divide-y divide-gray-200">
+                    @foreach (var alert in Model.NeedsAttention)
+                    {
+                        <li class="flex items-start justify-between gap-3 py-4">
+                            <div class="flex min-w-0 gap-3"><span class="mt-0.5 flex size-7 shrink-0 items-center justify-center border border-gray-200 text-gray-700" aria-hidden="true">!</span><div class="min-w-0"><p class="font-display text-base font-semibold text-ink">@alert.Title</p><p class="mt-1 text-xs leading-5 text-gray-500">@alert.Detail</p></div></div>
+                            @if (alert.IsAvailable)
+                            {
+                                <a href="@alert.Href" class="shrink-0 text-xs font-semibold text-primary-strong underline underline-offset-4">Open</a>
+                            }
+                            else
+                            {
+                                <span class="soon-tag shrink-0">Soon</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+        <section class="border-t border-gray-200 pt-6">
+            <p class="eyebrow">Permission-based</p><h2 class="mt-1 font-display text-xl font-semibold text-ink">Shortcuts</h2>
+            <div class="mt-4 flex flex-wrap gap-x-5 gap-y-3 text-sm text-gray-500">
+                @if (User.HasClaim("permission", "equipment.manage")) { <span class="inline-flex items-center gap-2">Equipment <span class="soon-tag">Soon</span></span> }
+                @if (User.HasClaim("permission", "borrower.manage")) { <span class="inline-flex items-center gap-2">Borrowers <span class="soon-tag">Soon</span></span> }
+                @if (User.HasClaim("permission", "user_role.manage")) { <span class="inline-flex items-center gap-2">Users &amp; roles <span class="soon-tag">Soon</span></span> }
+                @if (User.HasClaim("permission", "history.view")) { <span class="inline-flex items-center gap-2">Reports <span class="soon-tag">Soon</span></span> }
+            </div>
+        </section>
+    </aside>
+</div>

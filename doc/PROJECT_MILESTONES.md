@@ -32,8 +32,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | --- | --- |
 | Done | 2 |
 | In Review | 4 |
-| In Progress | 0 |
-| Not Started | 38 |
+| In Progress | 3 |
+| Not Started | 35 |
 | Blocked | 0 |
 
 ### By member
@@ -56,9 +56,9 @@ Shared rows count for each assigned member.
 | **2.00** | **Authentication: User Login** | | | | | | | | | |
 | 3.00 | User Login Page | Laroco | 9/24/2026 | 9/25/2026 | 1 | 9/25/2026 | 9/25/2026 | Done | #6 | M2 |
 | **4.00** | **Authentication: Role-Based Dashboard** | | | | | | | | | |
-| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
+| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Progress | | M2 |
+| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Progress | | M2 |
+| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Progress | | M2 |
 | **8.00** | **Authentication: Password Reset Request** | | | | | | | | | |
 | 9.00 | Request Password Reset Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 10.00 | Receive OTP in Email | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
@@ -139,8 +139,8 @@ Shared rows count for each assigned member.
 - [ ] Optionally use SQL Server Management Studio (SSMS) to administer and inspect SQL Server; SSMS is not the database engine.
 - [x] Use Entity Framework Core with `Microsoft.EntityFrameworkCore.SqlServer`.
 - [x] Add the initial entities and create/apply migrations based on the canonical ERD.
-- [ ] Configure Tailwind CSS, its Razor content scanning, development watch command, and minified production build.
-- [ ] Establish the shared layout, navigation, Tailwind styling, error pages, and basic logging.
+- [x] Configure Tailwind CSS, its Razor content scanning, development watch command, and minified production build.
+- [x] Establish the shared layout, navigation, Tailwind styling, error pages, and basic logging.
 - [ ] Create development/production configuration separation.
 - [x] Add GitHub Actions CI (build, EF migration check, vulnerable-package check, and CodeQL) and protect `main` (PR #6).
 
@@ -338,6 +338,7 @@ Shared rows count for each assigned member.
 | 9/25/2026 | Patched vulnerable build dependencies | Laroco | #6 |
 | 9/24/2026 | How to run the system guide (`doc/Instruction_On_How_To_Run.md`) | Bansag | #1, #5 |
 | 9/28/2026 | Enabled CI checks for all branches | Laroco | — |
+| 9/29/2026 | Removed Bootstrap/template styling and added Tailwind build assets | Laroco | — |
 
 ## Open questions
 
@@ -366,3 +367,4 @@ The first version is complete when borrowers can securely reserve one available 
 | --- | --- | --- |
 | 9/25/2026 | Added WBS Feature Tracker; marked 1.00 and 3.00 Done | Laroco |
 | 9/28/2026 | Moved WBS 9.00–12.00 to In Review for PR #19 and aligned password-reset documentation with the OTP/Brevo implementation | Bansag |
+| 9/29/2026 | Started WBS 5.00–7.00 dashboard implementation; added SQL-backed dashboards, shared responsive shell, Tailwind build, and demo seeding | Laroco |

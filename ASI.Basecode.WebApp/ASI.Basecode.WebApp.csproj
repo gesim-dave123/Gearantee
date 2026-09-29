@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <TypeScriptToolsVersion>4.4</TypeScriptToolsVersion>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
     <UserSecretsId>872bac6a-ed64-4226-a559-064bd37b166e</UserSecretsId>
   </PropertyGroup>
 

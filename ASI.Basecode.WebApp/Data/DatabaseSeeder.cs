@@ -340,7 +340,7 @@ namespace ASI.Basecode.WebApp.Data
                         ReleaseRecordId = returnedRelease.ReleaseRecordId,
                         ReceivedByUserId = user.Id,
                         ActualReturnAt = returned.ReservationEnd,
-                        ReturnedCondition = "Good",
+                        ReturnedCondition = DomainValues.ReturnConditions.Good,
                         ResultingItemStatus = DomainValues.EquipmentStatuses.Available,
                         Notes = "DEMO: Returned in good condition."
                     },
@@ -349,7 +349,7 @@ namespace ASI.Basecode.WebApp.Data
                         ReleaseRecordId = lateRelease.ReleaseRecordId,
                         ReceivedByUserId = user.Id,
                         ActualReturnAt = late.ReservationEnd.AddDays(2),
-                        ReturnedCondition = "Good",
+                        ReturnedCondition = DomainValues.ReturnConditions.Good,
                         ResultingItemStatus = DomainValues.EquipmentStatuses.Available,
                         Notes = "DEMO: Returned after due time."
                     },
@@ -358,7 +358,7 @@ namespace ASI.Basecode.WebApp.Data
                         ReleaseRecordId = damagedRelease.ReleaseRecordId,
                         ReceivedByUserId = user.Id,
                         ActualReturnAt = damaged.ReservationEnd.AddHours(1),
-                        ReturnedCondition = "Damaged",
+                        ReturnedCondition = DomainValues.ReturnConditions.Damaged,
                         ResultingItemStatus = DomainValues.EquipmentStatuses.UnderMaintenance,
                         Notes = "DEMO: Needs inspection."
                     });

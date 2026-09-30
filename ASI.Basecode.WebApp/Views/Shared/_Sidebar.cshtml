@@ -5,7 +5,14 @@
     var isAdmin = User.IsInRole(DomainValues.Roles.Administrator);
     var isCustodian = User.IsInRole(DomainValues.Roles.Custodian);
     var isBorrower = User.IsInRole(DomainValues.Roles.Borrower);
-    var workspace = isAdmin ? "Administrator workspace" : isCustodian ? "Custodian workspace" : "Borrower workspace";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var workspace = currentAction switch
+    {
+        "Borrower" => "Borrower workspace",
+        "Custodian" => "Custodian workspace",
+        "Administrator" => "Administrator workspace",
+        _ => isAdmin ? "Administrator workspace" : isCustodian ? "Custodian workspace" : "Borrower workspace"
+    };
     var roleTitle = isAdmin ? "System administrator" : isCustodian ? "Equipment custodian" : "Borrower";
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name ?? "Account";
     var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0])).ToUpperInvariant();

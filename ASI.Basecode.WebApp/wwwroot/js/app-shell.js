@@ -19,8 +19,13 @@
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") setOpen(false);
     });
+    let lastWidth = window.innerWidth;
     window.addEventListener("resize", () => {
-        if (window.innerWidth >= 1024) setOpen(false);
+        const width = window.innerWidth;
+        if (width >= 1024 || (lastWidth >= 1024 && width < 1024)) {
+            setOpen(false);
+        }
+        lastWidth = width;
     });
 
     setOpen(false);

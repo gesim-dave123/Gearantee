@@ -56,13 +56,16 @@ namespace ASI.Basecode.Services.Services
             };
 
         private readonly AsiBasecodeDBContext _db;
+        private readonly TimeProvider _timeProvider;
 
         public DashboardService(
             AsiBasecodeDBContext db,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            TimeProvider timeProvider)
             : base(loggerFactory)
         {
             _db = db;
+            _timeProvider = timeProvider;
         }
 
         public async Task<BorrowerDashboardModel> GetBorrowerDashboardAsync(
@@ -103,13 +106,14 @@ namespace ASI.Basecode.Services.Services
                 .AsNoTracking()
                 .Where(reservation =>
                     reservation.BorrowerProfileId == profileId);
-            var now = DateTime.UtcNow;
-            var (todayStart, _) = ManilaClock.TodayUtcRange();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var (todayStart, _) = ManilaClock.TodayUtcRange(now);
 
             model.PendingCount = await mine.CountAsync(reservation =>
                 reservation.Status == DomainValues.ReservationStatuses.Pending);
             model.ApprovedAwaitingPickupCount = await mine.CountAsync(reservation =>
                 reservation.Status == DomainValues.ReservationStatuses.Approved &&
+                reservation.ReservationStart >= todayStart &&
                 reservation.ReleaseRecord == null);
             model.ActiveLoanCount = await mine.CountAsync(reservation =>
                 reservation.ReleaseRecord != null &&
@@ -165,8 +169,8 @@ namespace ASI.Basecode.Services.Services
 
         public async Task<CustodianDashboardModel> GetCustodianDashboardAsync()
         {
-            var now = DateTime.UtcNow;
-            var (todayStart, todayEnd) = ManilaClock.TodayUtcRange();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var (todayStart, todayEnd) = ManilaClock.TodayUtcRange(now);
             var model = new CustodianDashboardModel();
 
             var pendingQuery = _db.Reservations
@@ -262,8 +266,8 @@ namespace ASI.Basecode.Services.Services
         public async Task<AdministratorDashboardModel>
             GetAdministratorDashboardAsync()
         {
-            var now = DateTime.UtcNow;
-            var (todayStart, todayEnd) = ManilaClock.TodayUtcRange();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var (todayStart, todayEnd) = ManilaClock.TodayUtcRange(now);
             var model = new AdministratorDashboardModel();
 
             model.TotalItems = await _db.EquipmentItems
@@ -273,6 +277,8 @@ namespace ASI.Basecode.Services.Services
                 .AsNoTracking()
                 .CountAsync(category => category.IsActive);
             model.ActiveLoanCount = await ActiveLoans().CountAsync();
+            model.OverdueLoanCount = await ActiveLoans()
+                .CountAsync(reservation => reservation.ReservationEnd < now);
             model.UnderMaintenanceCount = await _db.EquipmentItems
                 .AsNoTracking()
                 .CountAsync(item => !item.IsArchived &&
@@ -280,7 +286,7 @@ namespace ASI.Basecode.Services.Services
             model.DamagedAwaitingReviewCount = await _db.ReturnRecords
                 .AsNoTracking()
                 .CountAsync(record =>
-                    record.ReturnedCondition == "Damaged" &&
+                    record.ReturnedCondition == DomainValues.ReturnConditions.Damaged &&
                     record.ReleaseRecord.Reservation.EquipmentItem.ItemStatus ==
                         DomainValues.EquipmentStatuses.UnderMaintenance);
             model.IneligibleBorrowerCount = await _db.BorrowerProfiles
@@ -361,10 +367,10 @@ namespace ASI.Basecode.Services.Services
                 });
             }
 
-            var attention = new List<AttentionItem>();
+            var damaged = new List<AttentionItem>();
             if (model.DamagedAwaitingReviewCount > 0)
             {
-                attention.Add(new AttentionItem
+                damaged.Add(new AttentionItem
                 {
                     Title = "Damaged items need inspection",
                     Detail = $"{model.DamagedAwaitingReviewCount} returned item(s) are still under maintenance.",
@@ -374,25 +380,25 @@ namespace ASI.Basecode.Services.Services
             }
 
             var overdueRows = await ActiveLoans()
-                .Where(reservation => reservation.ReservationEnd < now.AddDays(-1))
+                .Where(reservation => reservation.ReservationEnd < now)
                 .OrderBy(reservation => reservation.ReservationEnd)
                 .Take(5)
                 .Select(ReservationProjection)
                 .ToListAsync();
-            foreach (var overdue in DecorateRows(overdueRows, now))
-            {
-                attention.Add(new AttentionItem
+            var overdueItems = DecorateRows(overdueRows, now)
+                .Select(overdue => new AttentionItem
                 {
                     Title = $"Overdue loan {overdue.LoanCode}",
                     Detail = $"{overdue.BorrowerName} · {overdue.ItemName} · {overdue.DaysOverdue} day(s) late.",
                     Href = "/Returns/Index",
                     IsAvailable = false
-                });
-            }
+                })
+                .ToList();
 
+            var ineligible = new List<AttentionItem>();
             if (model.IneligibleBorrowerCount > 0)
             {
-                attention.Add(new AttentionItem
+                ineligible.Add(new AttentionItem
                 {
                     Title = "Borrowers need eligibility review",
                     Detail = $"{model.IneligibleBorrowerCount} active borrower profile(s) are ineligible.",
@@ -401,21 +407,48 @@ namespace ASI.Basecode.Services.Services
                 });
             }
 
-            foreach (var category in model.InventoryByCategory
-                .Where(item => item.AvailableSpareCount == 0)
-                .Take(5))
-            {
-                attention.Add(new AttentionItem
+            var noSpare = model.InventoryByCategory
+                .Where(item => item.Total > 0 && item.AvailableSpareCount == 0)
+                .Take(5)
+                .Select(category => new AttentionItem
                 {
                     Title = $"No spare items in {category.Name}",
                     Detail = "No unreserved, available items are currently in this category.",
                     Href = "/EquipmentItems/Index",
                     IsAvailable = false
-                });
+                })
+                .ToList();
+
+            model.NeedsAttention = MergeAttention(
+                5,
+                damaged,
+                overdueItems,
+                ineligible,
+                noSpare);
+            return model;
+        }
+
+        private static List<AttentionItem> MergeAttention(
+            int limit,
+            params List<AttentionItem>[] groups)
+        {
+            var result = groups
+                .Where(group => group.Count > 0)
+                .Select(group => group[0])
+                .Take(limit)
+                .ToList();
+
+            foreach (var item in groups.SelectMany(group => group.Skip(1)))
+            {
+                if (result.Count >= limit)
+                {
+                    break;
+                }
+
+                result.Add(item);
             }
 
-            model.NeedsAttention = attention.Take(5).ToList();
-            return model;
+            return result;
         }
 
         private IQueryable<Reservation> ActiveLoans()
@@ -457,7 +490,7 @@ namespace ASI.Basecode.Services.Services
 
             if (row.ReleaseRecordId.HasValue)
             {
-                var (todayStart, todayEnd) = ManilaClock.TodayUtcRange();
+                var (todayStart, todayEnd) = ManilaClock.TodayUtcRange(nowUtc);
                 if (row.EndUtc < nowUtc)
                 {
                     return "Overdue";
@@ -470,6 +503,11 @@ namespace ASI.Basecode.Services.Services
 
             if (row.Status == DomainValues.ReservationStatuses.Approved)
             {
+                if (row.EndUtc < nowUtc)
+                {
+                    return "Missed pickup";
+                }
+
                 return "Awaiting Release";
             }
 

@@ -7,6 +7,7 @@ namespace ASI.Basecode.Services.ServiceModels.Dashboard
         public int TotalItems { get; set; }
         public int ActiveCategories { get; set; }
         public int ActiveLoanCount { get; set; }
+        public int OverdueLoanCount { get; set; }
         public int UnderMaintenanceCount { get; set; }
         public int DamagedAwaitingReviewCount { get; set; }
         public int IneligibleBorrowerCount { get; set; }

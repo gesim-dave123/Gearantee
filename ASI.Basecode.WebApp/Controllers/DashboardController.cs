@@ -57,6 +57,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [Authorize(Roles = DomainValues.Roles.Borrower)]
         public async Task<IActionResult> Borrower()
         {
+            var localNow = ManilaClock.NowLocal;
             var model = new BorrowerDashboardModel
             {
                 DisplayName = User.FindFirst("display_name")?.Value ?? "there"
@@ -73,14 +74,14 @@ namespace ASI.Basecode.WebApp.Controllers
                     "Dashboard information could not be loaded. Refresh the page or contact support.";
             }
 
-            var localHour = ManilaClock.NowLocal.Hour;
+            var localHour = localNow.Hour;
             var greeting = localHour < 12
                 ? "morning"
                 : localHour < 18 ? "afternoon" : "evening";
             ViewData["Title"] = $"Good {greeting}, {model.DisplayName}";
             ViewData["Eyebrow"] = "Borrower workspace";
             ViewData["Workspace"] = "Borrower workspace";
-            ViewData["PageDate"] = ManilaClock.NowLocal.ToString("ddd d MMM yyyy");
+            ViewData["PageDate"] = localNow.ToString("ddd d MMM yyyy");
             return View(model);
         }
 
@@ -88,6 +89,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [Authorize(Roles = DomainValues.Roles.Custodian)]
         public async Task<IActionResult> Custodian()
         {
+            var localNow = ManilaClock.NowLocal;
             var model = new CustodianDashboardModel();
             try
             {
@@ -103,7 +105,7 @@ namespace ASI.Basecode.WebApp.Controllers
             ViewData["Title"] = "Equipment desk";
             ViewData["Eyebrow"] = "Custodian workspace";
             ViewData["Workspace"] = "Custodian workspace";
-            ViewData["PageDate"] = ManilaClock.NowLocal.ToString("ddd d MMM yyyy");
+            ViewData["PageDate"] = localNow.ToString("ddd d MMM yyyy");
             return View(model);
         }
 
@@ -111,6 +113,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [Authorize(Roles = DomainValues.Roles.Administrator)]
         public async Task<IActionResult> Administrator()
         {
+            var localNow = ManilaClock.NowLocal;
             var model = new AdministratorDashboardModel();
             try
             {
@@ -126,7 +129,7 @@ namespace ASI.Basecode.WebApp.Controllers
             ViewData["Title"] = "System overview";
             ViewData["Eyebrow"] = "Administrator workspace";
             ViewData["Workspace"] = "Administrator workspace";
-            ViewData["PageDate"] = ManilaClock.NowLocal.ToString("ddd d MMM yyyy");
+            ViewData["PageDate"] = localNow.ToString("ddd d MMM yyyy");
             return View(model);
         }
     }

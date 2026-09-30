@@ -18,6 +18,7 @@ namespace ASI.Basecode.WebApp
         {
             _services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             _services.TryAddSingleton<IActionContextAccessor, ActionContextAccessor>();
+            _services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             _services.AddScoped<IUnitOfWork, UnitOfWork>();
             _services.Configure<BrevoOptions>(
                 Configuration.GetSection(BrevoOptions.SectionName));

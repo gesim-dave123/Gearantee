@@ -13,6 +13,11 @@ namespace ASI.Basecode.Data
         {
         }
 
+        protected AsiBasecodeDBContext(DbContextOptions options)
+            : base(options)
+        {
+        }
+
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<BorrowerProfile> BorrowerProfiles { get; set; }

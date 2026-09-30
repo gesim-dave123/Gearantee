@@ -3,10 +3,10 @@
 @using System.Globalization
 
 <section class="mb-9 grid grid-cols-2 gap-x-5 gap-y-6 xl:grid-cols-4 xl:gap-x-8" aria-label="System summary">
-    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Equipment items", Value = Model.TotalItems, Status = "Active", Caption = "Non-archived inventory" })" />
-    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Active categories", Value = Model.ActiveCategories, Status = "Eligible", Caption = "Categories available to the system" })" />
-    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Active loans", Value = Model.ActiveLoanCount, Status = "Borrowed", Caption = "Currently released equipment" })" />
-    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Under maintenance", Value = Model.UnderMaintenanceCount, Status = "Under Maintenance", Caption = "Items currently unavailable for lending" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Items tracked", Value = Model.TotalItems, Status = "Active", Caption = $"Across {Model.ActiveCategories} active categories" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Out on loan", Value = Model.ActiveLoanCount, Status = "Borrowed", Caption = Model.OverdueLoanCount == 0 ? "None overdue" : $"{Model.OverdueLoanCount} overdue" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Under maintenance", Value = Model.UnderMaintenanceCount, Status = "Under Maintenance", Caption = $"{Model.DamagedAwaitingReviewCount} awaiting damage review" })" />
+    <partial name="Components/_KpiTile" model="@(new KpiTileModel { Label = "Ineligible borrowers", Value = Model.IneligibleBorrowerCount, Status = "Ineligible", Caption = "Blocked from new reservations" })" />
 </section>
 
 <div class="grid gap-10 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">

@@ -5,25 +5,56 @@ namespace ASI.Basecode.Services.Utilities
     public static class ManilaClock
     {
         private static readonly TimeZoneInfo ManilaTimeZone =
-            TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+            ResolveManilaTimeZone();
 
-        public static DateTime NowLocal => TimeZoneInfo.ConvertTimeFromUtc(
-            DateTime.UtcNow,
-            ManilaTimeZone);
+        public static DateTime NowLocal => ToLocal(DateTime.UtcNow);
+
+        private static TimeZoneInfo ResolveManilaTimeZone()
+        {
+            foreach (var id in new[] { "Asia/Manila", "Singapore Standard Time" })
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(id);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                }
+                catch (InvalidTimeZoneException)
+                {
+                }
+            }
+
+            // The Philippines does not observe daylight saving time, so UTC+8
+            // remains a correct fallback on systems with no installed zone data.
+            return TimeZoneInfo.CreateCustomTimeZone(
+                "Gearantee/Manila",
+                TimeSpan.FromHours(8),
+                "Philippine Time",
+                "Philippine Time");
+        }
 
         public static DateTime ToLocal(DateTime utc)
         {
             var utcValue = utc.Kind == DateTimeKind.Utc
                 ? utc
                 : DateTime.SpecifyKind(utc, DateTimeKind.Utc);
-            return TimeZoneInfo.ConvertTimeFromUtc(utcValue, ManilaTimeZone);
+            return DateTime.SpecifyKind(
+                TimeZoneInfo.ConvertTimeFromUtc(utcValue, ManilaTimeZone),
+                DateTimeKind.Unspecified);
         }
 
         public static (DateTime StartUtc, DateTime EndUtc) TodayUtcRange()
         {
-            var todayLocal = NowLocal.Date;
+            return TodayUtcRange(DateTime.UtcNow);
+        }
+
+        public static (DateTime StartUtc, DateTime EndUtc) TodayUtcRange(
+            DateTime nowUtc)
+        {
+            var todayLocal = ToLocal(nowUtc).Date;
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(
-                todayLocal,
+                DateTime.SpecifyKind(todayLocal, DateTimeKind.Unspecified),
                 ManilaTimeZone);
             return (startUtc, startUtc.AddDays(1));
         }

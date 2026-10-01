@@ -56,7 +56,7 @@ Server=(localdb)\MSSQLLocalDB;Database=GearanteeDev
 
 ## 3. Apply the EF Core database schema
 
-The repository already contains the initial migration. Creating `GearanteeDev` only creates an empty database, so apply the migration to create the Identity and application tables.
+The repository contains the canonical schema and feature migrations. Creating `GearanteeDev` only creates an empty database, so apply all pending migrations to create/update the Identity and application tables.
 
 If you cloned the repository, restore the local EF CLI tool once before running the commands:
 

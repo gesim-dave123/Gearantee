@@ -32,8 +32,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | --- | --- |
 | Done | 5 |
 | In Review | 4 |
-| In Progress | 0 |
-| Not Started | 35 |
+| In Progress | 5 |
+| Not Started | 30 |
 | Blocked | 0 |
 
 ### By member
@@ -65,11 +65,11 @@ Shared rows count for each assigned member.
 | 11.00 | OTP Verification Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 12.00 | Set New Password | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | **13.00** | **Administration: User and Role Management** | | | | | | | | | |
-| 14.00 | View User Accounts Page | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 15.00 | Create Accounts | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 16.00 | Assign & Update Roles | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 17.00 | Configure Role Access Permissions | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 18.00 | Deactivate Users | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
+| 14.00 | View User Accounts Page | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Progress | | M3 |
+| 15.00 | Create Accounts | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Progress | | M3 |
+| 16.00 | Assign & Update Roles | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Progress | | M3 |
+| 17.00 | Configure Role Access Permissions | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Progress | | M3 |
+| 18.00 | Deactivate Users | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Progress | | M3 |
 | **19.00** | **Master Data: Equipment Category Management** | | | | | | | | | |
 | 20.00 | Create Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
 | 21.00 | Read Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
@@ -373,3 +373,5 @@ The first version is complete when borrowers can securely reserve one available 
 | 9/30/2026 | Addressed PR #21 review findings TEST-01, OPS-01, UX-01, and P3-01–P3-05 | Laroco |
 | 10/1/2026 | Removed the Location entity and updated the schema, dashboards, demo seed, and ERD for item location text | Laroco |
 | 10/1/2026 | Marked WBS 5.00–7.00 Done using owner-confirmed 9/25 start and 9/28 completion dates; PR #21 merged on 10/1 | Laroco |
+| 10/1/2026 | Started WBS 14.00–18.00 implementation for user accounts, role assignment, permissions, and account activation management | Laroco |
+| 10/1/2026 | Implemented the user-administration screens, Identity workflows, permission controls, SQL Server safeguards, documentation, and regression tests; awaiting PR review before advancing WBS status | Laroco |

@@ -10,11 +10,22 @@
             </div>
         </div>
         <div class="hidden items-center gap-4 md:flex">
-            <label class="sr-only" for="catalog-search">Search equipment</label>
-            <div class="flex items-center gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500" title="Available when the equipment catalog is live">
-                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg>
-                <input id="catalog-search" type="search" placeholder="Search equipment" disabled class="w-44 bg-transparent outline-none placeholder:text-gray-500" />
-            </div>
+            @if (ViewContext.RouteData.Values["controller"]?.ToString() == "Users")
+            {
+                <form asp-controller="Users" asp-action="Index" method="get" class="flex items-center gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                    <label class="sr-only" for="accounts-header-search">Search user accounts</label>
+                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg>
+                    <input id="accounts-header-search" name="search" value="@(Context.Request.Query["search"].ToString())" type="search" placeholder="Search accounts" class="w-44 bg-transparent outline-none placeholder:text-gray-500" />
+                </form>
+            }
+            else
+            {
+                <label class="sr-only" for="catalog-search">Search equipment</label>
+                <div class="flex items-center gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500" title="Available when the equipment catalog is live">
+                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg>
+                    <input id="catalog-search" type="search" placeholder="Search equipment" disabled class="w-44 bg-transparent outline-none placeholder:text-gray-500" />
+                </div>
+            }
             <p class="whitespace-nowrap text-xs text-gray-500">@ViewData["PageDate"]</p>
         </div>
     </div>

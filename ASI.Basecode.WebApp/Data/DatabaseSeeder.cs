@@ -52,7 +52,10 @@ namespace ASI.Basecode.WebApp.Data
                     DomainValues.Permissions.HistoryView
                 },
                 [DomainValues.Roles.Administrator] =
-                    PermissionDescriptions.Keys.ToArray()
+                    PermissionDescriptions.Keys
+                        .Where(permission => permission !=
+                            DomainValues.Permissions.ReservationCreate)
+                        .ToArray()
             };
 
         public static async Task SeedAsync(
@@ -113,6 +116,13 @@ namespace ASI.Basecode.WebApp.Data
             foreach (var roleEntry in RolePermissions)
             {
                 var role = await roleManager.FindByNameAsync(roleEntry.Key);
+                var defaultsWereSeeded = await dbContext.RolePermissionSeeds
+                    .AnyAsync(seed => seed.RoleId == role.Id);
+                if (defaultsWereSeeded)
+                {
+                    continue;
+                }
+
                 foreach (var permissionName in roleEntry.Value)
                 {
                     var permissionId =
@@ -129,6 +139,11 @@ namespace ASI.Basecode.WebApp.Data
                         });
                     }
                 }
+
+                dbContext.RolePermissionSeeds.Add(new RolePermissionSeed
+                {
+                    RoleId = role.Id
+                });
             }
 
             await dbContext.SaveChangesAsync();
@@ -157,6 +172,7 @@ namespace ASI.Basecode.WebApp.Data
             }
 
             var user = await userManager.FindByEmailAsync(email);
+            var created = user == null;
             if (user == null)
             {
                 user = new ApplicationUser
@@ -176,7 +192,7 @@ namespace ASI.Basecode.WebApp.Data
                 EnsureSucceeded(createResult, "create the initial administrator");
             }
 
-            if (!await userManager.IsInRoleAsync(
+            if (created && !await userManager.IsInRoleAsync(
                 user,
                 DomainValues.Roles.Administrator))
             {

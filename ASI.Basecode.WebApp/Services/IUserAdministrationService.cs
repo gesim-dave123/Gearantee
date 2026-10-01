@@ -1,0 +1,31 @@
+using ASI.Basecode.WebApp.Models;
+using System.Threading.Tasks;
+
+namespace ASI.Basecode.WebApp.Services
+{
+    public interface IUserAdministrationService
+    {
+        Task<bool> CanManageAsync(string actorUserId);
+        Task<UserAccountsIndexViewModel> GetAccountsAsync(
+            string actorUserId,
+            string search,
+            string status,
+            string roleId,
+            int page);
+        Task<EditUserViewModel> GetUserAsync(string actorUserId, string userId);
+        Task<RolePermissionsViewModel> GetRolePermissionsAsync(
+            string actorUserId);
+        Task<UserAdministrationResult> CreateAsync(
+            string actorUserId,
+            CreateUserViewModel model);
+        Task<UserAdministrationResult> UpdateAsync(
+            string actorUserId,
+            EditUserViewModel model);
+        Task<UserAdministrationResult> SetActiveAsync(
+            string actorUserId,
+            SetAccountActiveViewModel model);
+        Task<UserAdministrationResult> UpdatePermissionsAsync(
+            string actorUserId,
+            UpdateRolePermissionsViewModel model);
+    }
+}

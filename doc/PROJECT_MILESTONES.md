@@ -14,7 +14,7 @@ Update this file **in the same PR** that finishes or starts a feature.
 2. Set **Status** to one of: `Not Started` · `In Progress` · `In Review` · `Done` · `Blocked`.
    - `In Progress` → fill **Actual Start**.
    - `In Review` → add the PR link (for example, `#12`).
-   - `Done` → fill **Actual End** (the merge date) and keep the PR link.
+   - `Done` → fill **Actual End** with the owner-confirmed completion date (use the merge date when no earlier completion date is confirmed) and keep the PR link.
 3. Tick the related `[ ]` → `[x]` item(s) in the matching Milestone section only when *all* WBS rows for that item are `Done`.
 4. Recalculate the Progress summary counts.
 5. Add one line to the Change log.
@@ -30,8 +30,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 
 | Status | Count |
 | --- | --- |
-| Done | 2 |
-| In Review | 7 |
+| Done | 5 |
+| In Review | 4 |
 | In Progress | 0 |
 | Not Started | 35 |
 | Blocked | 0 |
@@ -44,7 +44,7 @@ Shared rows count for each assigned member.
 | --- | --- | --- |
 | Member 1 — Gesim | 6 (1.00, 20–23, 56) | 1 |
 | Member 2 — Bansag | 13 (1.00, 9–12, 25–28, 52–55) | 1 |
-| Member 3 — Laroco | 12 (1.00, 3, 5–7, 14–18, 49–50) | 2 |
+| Member 3 — Laroco | 12 (1.00, 3, 5–7, 14–18, 49–50) | 5 |
 | Member 4 — Cancencia | 7 (30–32, 39–42) | 0 |
 | Member 5 — Cataraja | 9 (34–37, 44–47, 56) | 0 |
 
@@ -56,9 +56,9 @@ Shared rows count for each assigned member.
 | **2.00** | **Authentication: User Login** | | | | | | | | | |
 | 3.00 | User Login Page | Laroco | 9/24/2026 | 9/25/2026 | 1 | 9/25/2026 | 9/25/2026 | Done | #6 | M2 |
 | **4.00** | **Authentication: Role-Based Dashboard** | | | | | | | | | |
-| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Review | #21 | M2 |
-| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Review | #21 | M2 |
-| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/29/2026 | | In Review | #21 | M2 |
+| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
+| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
+| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
 | **8.00** | **Authentication: Password Reset Request** | | | | | | | | | |
 | 9.00 | Request Password Reset Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 10.00 | Receive OTP in Email | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
@@ -165,7 +165,7 @@ Shared rows count for each assigned member.
 - [x] Configure ASP.NET Core Identity with SQL Server.
 - [x] Seed the three roles and documented role-permission assignments.
 - [x] Build Identity-backed registration, login, and logout pages.
-- [ ] Build role-based dashboards and navigation.
+- [x] Build role-based dashboards and navigation.
 - [ ] Add account activation/deactivation behavior.
 - [ ] Implement Forgot Password using Identity reset tokens, Brevo OTP delivery, and verified sender secrets.
 - [x] Apply password policy, sign-in lockout, HTTPS redirect, and global authorization rules; apply per-page permission rules as each feature lands (PR #6).
@@ -369,6 +369,7 @@ The first version is complete when borrowers can securely reserve one available 
 | --- | --- | --- |
 | 9/25/2026 | Added WBS Feature Tracker; marked 1.00 and 3.00 Done | Laroco |
 | 9/28/2026 | Moved WBS 9.00–12.00 to In Review for PR #19 and aligned password-reset documentation with the OTP/Brevo implementation | Bansag |
-| 9/29/2026 | Started WBS 5.00–7.00 dashboard implementation; added SQL-backed dashboards, shared responsive shell, Tailwind build, and demo seeding | Laroco |
+| 9/29/2026 | Added SQL-backed dashboards, shared responsive shell, Tailwind build, and demo seeding for WBS 5.00–7.00 | Laroco |
 | 9/30/2026 | Addressed PR #21 review findings TEST-01, OPS-01, UX-01, and P3-01–P3-05 | Laroco |
 | 10/1/2026 | Removed the Location entity and updated the schema, dashboards, demo seed, and ERD for item location text | Laroco |
+| 10/1/2026 | Marked WBS 5.00–7.00 Done using owner-confirmed 9/25 start and 9/28 completion dates; PR #21 merged on 10/1 | Laroco |

@@ -1,85 +1,123 @@
 @model LoginViewModel
-@using static ASI.Basecode.Resources.Views.Screen
-@section styles {
-    <link rel="stylesheet" href="~/css/login.css" />
-}
 @{
     ViewBag.LoginView = true;
+    ViewBag.LoginPage = true;
     ViewData["Title"] = "Login";
 }
 
-<div class="container py-5" style="display:flex; align-content:center;height:calc(100vh - 64px)">
-    <div class="row d-flex justify-content-center align-items-center h-100">
-        <div class="col-xl-10">
-            <div class="card rounded-3 text-black">
-                <div class="row g-0 w-1000px">
-                    <div class="col-lg-6">
-                        <div class="card-body p-md-5 mx-md-4">
-                            <div class="text-center">
-                                <img src="~/img/asi-logo-invert.svg"
-                                     style="width: 185px;" alt="logo">
-                            </div>
+<div class="login-page">
+    <aside class="login-story" aria-label="Gearantee overview">
+        <div class="login-story-mark" aria-hidden="true">
+            <img class="login-story-logo" src="~/img/gearantee-logo.png" alt="Gearantee — Campus equipment borrowing and reservation system" />
+        </div>
+        <div class="login-story-content">
+            <div class="login-story-copy">
+                <h1>Reserve it,<br />collect it,<br />return it.</h1>
+                <p>One record for every laptop, projector, camera, speaker and lab tool the campus lends out — from request to condition check.</p>
+            </div>
 
-                            <form asp-action="Login" asp-controller="Account" method="post">
-                                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
-                                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-                                <div class="form-outline mb-4">
-                                    <label asp-for="UserId" class="form-label">@UserId</label>
-                                    <input asp-for="UserId" class="form-control"
-                                           autocomplete="username"
-                                           placeholder="Enter user code or email" />
-                                    <span asp-validation-for="UserId" class="text-danger"></span>
-                                </div>
-
-                                <div class="form-outline mb-4">
-                                    <label asp-for="Password" class="form-label">@Password</label>
-                                    <input asp-for="Password" type="password"
-                                           class="form-control"
-                                           autocomplete="current-password"
-                                           placeholder="Enter password" />
-                                    <span asp-validation-for="Password" class="text-danger"></span>
-                                </div>
-
-                                <div class="form-check mb-4">
-                                    <input asp-for="RememberMe" class="form-check-input" />
-                                    <label asp-for="RememberMe" class="form-check-label"></label>
-                                </div>
-
-                                <div class="text-center pt-1 mb-5 pb-1 d-flex flex-column align-items-center">
-                                    <button class="btn btn-primary btn-block login-btn gradient-custom-2 mb-3"
-                                            type="submit">
-                                        @Login
-                                    </button>
-                                    <div>
-                                        <a class="text-muted" href="#!">@ForgotPass</a>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center justify-content-center pb-4">
-                                    <p class="mb-0 me-2 mr-1">@DontHaveAcc</p>
-                                    <a asp-controller="Account" asp-action="Register"
-                                       class="btn btn-outline-danger">@CreateNew</a>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 d-flex">
-                        <img style="width:400px" src="~/img/LiveIT.png"
-                             alt="Campus equipment" />
-                    </div>
+            <div class="login-stats" aria-label="System summary">
+                <div class="login-stat">
+                    <strong>248</strong>
+                    <span>Items tracked</span>
+                </div>
+                <div class="login-stat">
+                    <strong>5</strong>
+                    <span>Categories</span>
+                </div>
+                <div class="login-stat">
+                    <strong>3</strong>
+                    <span>Roles</span>
                 </div>
             </div>
         </div>
+    </aside>
+
+    <div class="login-form-shell">
+        <section class="login-panel" aria-labelledby="login-heading">
+            <h2 id="login-heading">Sign in</h2>
+            <p class="login-intro">Use your school email or student / faculty ID.</p>
+
+            <form id="login-form" asp-action="Login" asp-controller="Account" method="post">
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+                <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+                <div class="login-field">
+                    <label asp-for="UserId">Email or school ID</label>
+                    <input asp-for="UserId" class="input"
+                           autocomplete="username"
+                           placeholder="mvillanueva@school.edu" />
+                    <span asp-validation-for="UserId" class="field-validation-error"></span>
+                </div>
+
+                <div class="login-field">
+                    <label asp-for="Password"></label>
+                    <div class="login-password-wrap">
+                        <input asp-for="Password" type="password" class="input"
+                               autocomplete="current-password"
+                               placeholder="••••••••••" />
+                        <button id="toggle-password" class="login-password-toggle" type="button"
+                                aria-controls="Password" aria-label="Show password">
+                            Show
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="field-validation-error"></span>
+                </div>
+
+                <div class="login-options">
+                    <label class="login-remember">
+                        <input asp-for="RememberMe" />
+                        <span>Remember me</span>
+                    </label>
+                    <a href="/Account/ForgotPassword">Forgot password?</a>
+                </div>
+
+                <button id="login-submit" class="btn-primary w-full py-3 text-sm disabled:cursor-wait disabled:opacity-60" type="submit">Sign in</button>
+            </form>
+
+            <p class="login-register">
+                No account?
+                <a asp-controller="Account" asp-action="Register">Create one</a>
+            </p>
+        </section>
     </div>
 </div>
 
-@section scripts {
+@section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         const successMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
         if (successMessage) {
             toastr.success(successMessage);
         }
+
+        const passwordInput = document.getElementById("Password");
+        const passwordToggle = document.getElementById("toggle-password");
+        const loginForm = document.getElementById("login-form");
+        const submitButton = document.getElementById("login-submit");
+
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener("click", function () {
+                const isHidden = passwordInput.type === "password";
+                passwordInput.type = isHidden ? "text" : "password";
+                passwordToggle.textContent = isHidden ? "Hide" : "Show";
+                passwordToggle.setAttribute(
+                    "aria-label",
+                    isHidden ? "Hide password" : "Show password");
+            });
+        }
+
+        loginForm.addEventListener("submit", function () {
+            if (window.jQuery && !$(loginForm).valid()) {
+                return;
+            }
+
+            if (!window.jQuery && !loginForm.checkValidity()) {
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = "Signing in...";
+        });
     </script>
 }

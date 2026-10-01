@@ -12,6 +12,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - **Database:** Microsoft SQL Server accessed through Entity Framework Core and `Microsoft.EntityFrameworkCore.SqlServer`.
 - **Database administration:** SQL Server Management Studio (SSMS) may be used to inspect and administer SQL Server, but SSMS is not the database engine.
 - **Authentication:** ASP.NET Core Identity with Identity roles and policy-based permissions.
+- **Password recovery:** Six-digit OTP delivery through Brevo, with Identity generating the final password-reset token after OTP verification.
 - **Styling:** Tailwind CSS compiled into a production stylesheet under `wwwroot`, plus minimal custom CSS where required.
 - **Reservation scope:** One physical equipment item per reservation in Version 1.
 
@@ -39,8 +40,12 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Administrators see management and reporting functions.
 
 #### Password Reset Request
-- A user can request an expiring ASP.NET Core Identity password-reset link using their registered email address.
-- The response must not reveal whether the address exists, and Identity validates the token before accepting a new password.
+- A user can request a six-digit OTP using their registered email address.
+- The OTP is hashed and stored in the existing ASP.NET Core Identity user-token table for ten minutes, with a maximum of five checked attempts.
+- OTP attempts are reserved atomically so concurrent requests cannot bypass the attempt limit.
+- Requests are rate-limited and resend requests use a per-account cooldown and hourly issuance cap.
+- The response must not reveal whether the address exists.
+- After successful OTP verification, ASP.NET Core Identity creates a short-lived reset token that is submitted in the reset form rather than placed in the URL.
 
 ### 3.2 Master Data Management
 
@@ -138,8 +143,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 | Identity Role / User Role | Role assignment | Identity role ID/name and user-role association |
 | Permission / Role Permission | Fine-grained authorization | Permission name and role-permission association |
 | Equipment Category | Equipment grouping | Category ID, name, active status |
-| Location | Controlled storage/facility location | Location ID, name, active status |
-| Equipment Item | Individual trackable item | Item ID/code, category, location, name/model, serial number, image URL/path, condition, operational status |
+| Equipment Item | Individual trackable item | Item ID/code, category, free-text `VARCHAR(200)` location, name/model, serial number, image URL/path, condition, operational status |
 | Reservation | Requested schedule for exactly one item | Reservation ID, borrower profile, equipment item, purpose, requested release/return dates, status, reviewer |
 | Release Record | Confirmation of handover | Release ID, reservation, custodian, actual release time, notes |
 | Return Record | Confirmation of return and inspection | Return ID, release/reservation, custodian, actual return time, condition, notes |
@@ -164,4 +168,4 @@ The initial release is intentionally focused on the core borrowing workflow and 
 
 ## 9. Scope for the First Website Version
 
-The first website should implement these functions with ASP.NET Core MVC and Razor Views, a responsive Tailwind CSS interface, role/permission-protected access, and a SQL Server-backed audit trail. Out of scope unless later requested: online payment/penalties, external school-information-system synchronization, barcode scanning, SMS notifications, and multi-campus inventory transfers. Password-reset email through the approved school SMTP server remains in scope.
+The first website should implement these functions with ASP.NET Core MVC and Razor Views, a responsive Tailwind CSS interface, role/permission-protected access, and a SQL Server-backed audit trail. Out of scope unless later requested: online payment/penalties, external school-information-system synchronization, barcode scanning, SMS notifications, and multi-campus inventory transfers. Password-reset OTP delivery through Brevo remains in scope.

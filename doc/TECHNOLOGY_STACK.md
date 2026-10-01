@@ -11,8 +11,8 @@ This stack applies to the entire Campus Equipment Borrowing & Reservation System
 | Database | Microsoft SQL Server | Stores Identity data, borrower profiles, inventory, reservations, releases, returns, permissions, and audit fields. |
 | Database administration | SQL Server Management Studio (SSMS), optional | Provides a graphical tool for inspecting and administering SQL Server. SSMS is not the database engine. |
 | Database access | Entity Framework Core + `Microsoft.EntityFrameworkCore.SqlServer` | Maps C# entities to SQL Server tables and manages queries and migrations. |
-| Email library | MailKit | Sends password-reset messages through SMTP. |
-| Email delivery | School SMTP server | Delivers reset messages from an approved school address. |
+| Email client | `HttpClient` | Calls Brevo's transactional email API. |
+| Email delivery | Brevo transactional email API | Delivers six-digit password-reset OTPs from a verified sender address. |
 | User interface | ASP.NET Core MVC with Razor Views | Provides server-rendered pages, forms, tables, dashboards, and role-specific screens. |
 | Styling | Tailwind CSS + minimal custom CSS | Provides responsive utility-based styling without Bootstrap. |
 | Client-side interaction | Vanilla JavaScript | Supports confirmation dialogs, filters, calendar interaction, and small asynchronous updates. |
@@ -76,15 +76,15 @@ Browser
   │  1. User submits a registered email
   ▼
 ASP.NET Core MVC application
-  │  2. ASP.NET Core Identity creates a protected, expiring reset token
-  ├──────────────────────────────► MailKit ► School SMTP ► User inbox
+  │  2. Application creates and hashes a six-digit OTP
+  ├──────────────────────────────► Brevo API ► User inbox
   │
   ▼
 Microsoft SQL Server
   Stores Identity users, password hashes, roles, and security metadata
 ```
 
-SQL Server stores Identity records but does not send email. MailKit connects to the school SMTP server to deliver the reset link. No custom password-reset or plaintext OTP table is required for the first version.
+SQL Server stores Identity records but does not send email. The application calls Brevo to deliver the OTP. No custom password-reset table or plaintext OTP column is required; the hashed OTP is stored in `AspNetUserTokens`.
 
 ## 5. Whole-System Architecture
 
@@ -101,11 +101,11 @@ ASP.NET Core MVC application
  ├─ Business services: availability, reservations, approval, release, return
  ├─ Reporting services: history, overdue, availability, inventory
  ├─ Entity Framework Core SQL Server provider
- └─ MailKit: password-reset email delivery
+ └─ Brevo API via HttpClient: password-reset OTP delivery
                   │
                   ▼
           Microsoft SQL Server
- Identity | Profiles | Permissions | Categories | Locations | Items
+ Identity | Profiles | Permissions | Categories | Items (location text)
  Reservations | Releases | Returns | Late returns | Audit fields
 ```
 
@@ -114,10 +114,10 @@ ASP.NET Core MVC application
 | System function | Technologies used | How they support the feature |
 | --- | --- | --- |
 | Login and role-based dashboards | ASP.NET Core Identity, MVC, SQL Server | Authenticates users, loads roles/permissions, and selects the authorized dashboard. |
-| Forgot Password | ASP.NET Core Identity, MailKit, school SMTP, SQL Server | Generates a protected reset token, emails a link, and securely updates the password hash. |
+| Forgot Password | ASP.NET Core Identity, Brevo API, SQL Server | Rate-limits OTP requests, stores a hashed OTP, verifies it atomically, and securely updates the password hash. |
 | User and role management | ASP.NET Core Identity, EF Core, SQL Server | Creates/deactivates accounts and assigns roles. |
 | Borrower profiles | MVC, EF Core, SQL Server | Maintains school ID, department, contact information, and eligibility separately from authentication data. |
-| Equipment management | MVC, EF Core, SQL Server | Maintains categories, locations, physical items, conditions, and statuses. |
+| Equipment management | MVC, EF Core, SQL Server | Maintains categories, physical items, each item's location text, conditions, and statuses. |
 | Reservation requests | MVC, server validation, EF Core, SQL Server | Stores one equipment item per reservation after eligibility and schedule validation. |
 | Conflict prevention | C# business service, SQL Server transaction/query | Prevents overlapping approved reservations or active loans for an item. |
 | Approval and release | Authorization policies, EF Core, SQL Server | Restricts decisions and handover records to authorized staff. |
@@ -132,7 +132,7 @@ ASP.NET Core MVC application
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | Identity persistence through EF Core. |
 | `Microsoft.EntityFrameworkCore.SqlServer` | SQL Server provider for EF Core. |
 | `Microsoft.EntityFrameworkCore.Design` | Design-time migration tooling. |
-| `MailKit` | SMTP email delivery. |
+| Brevo API via `HttpClient` | Transactional OTP email delivery. |
 | Tailwind CSS CLI/PostCSS | Compiles Tailwind source CSS into the application stylesheet. |
 | FullCalendar | Equipment availability calendar. |
 
@@ -143,26 +143,22 @@ Required settings include:
 | Setting | Purpose |
 | --- | --- |
 | `ConnectionStrings:DefaultConnection` | SQL Server connection string. |
-| `Smtp:Host` | School SMTP host. |
-| `Smtp:Port` | SMTP port, commonly `587` for STARTTLS. |
-| `Smtp:Username` | SMTP account name. |
-| `Smtp:Password` | Protected SMTP credential. |
-| `Smtp:FromAddress` | Approved sender address. |
-| `Smtp:FromName` | Sender display name. |
-| `Application:BaseUrl` | Public URL used in password-reset links. |
+| `Brevo:ApiKey` | Protected Brevo API credential. |
+| `Brevo:SenderEmail` | Verified sender address in Brevo. |
+| `Brevo:SenderName` | Sender display name. |
 
 Development secrets belong in .NET user secrets. Production secrets belong in protected environment or hosting configuration. No real credentials or token-signing secrets may be committed to the repository.
 
 ## 9. Security Requirements
 
-- Use HTTPS and SMTP TLS/STARTTLS.
+- Use HTTPS for the application and Brevo API calls.
 - Use ASP.NET Core Identity password hashing; never use reversible password encryption.
 - Return the same forgot-password response for known and unknown email addresses.
-- Configure reset-token lifetime, sign-in lockout, and request rate limiting.
+- Configure reset-token lifetime, sign-in lockout, OTP attempt limits, resend cooldowns, and request rate limiting.
 - Enforce permissions on backend actions, not only in the user interface.
 - Record the responsible user and timestamp for approval, rejection, release, return, and administrative changes.
 - Apply migrations through a controlled deployment process and maintain tested SQL Server backups.
 
 ## 10. Non-Required Services for Version 1
 
-The first version does not require SendGrid, Firebase Authentication, Twilio SMS, Azure Communication Services, or a payment service. MailKit and an approved school SMTP server are sufficient when SMTP access is available.
+The first version does not require SendGrid, Firebase Authentication, Twilio SMS, Azure Communication Services, or a payment service. Brevo and a verified sender address are sufficient for password-reset OTP delivery.

@@ -11,7 +11,7 @@ An ASP.NET Core MVC application for managing school equipment reservations, appr
 - Microsoft SQL Server with Entity Framework Core
 - SQL Server Management Studio (SSMS) as an optional administration tool
 - Tailwind CSS with minimal custom CSS
-- MailKit and school SMTP for password-reset email
+- Brevo transactional email API for password-reset OTP delivery
 - FullCalendar for daily/weekly availability
 
 The canonical database design is documented in [the ERD and data dictionary](doc/Campus_Equipment_Borrowing_ERD_Data_Dictionary.md).
@@ -52,22 +52,32 @@ dotnet tool restore
 Keep secrets out of committed JSON files. Use .NET user secrets for local development:
 
 ```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=Gearantee;Trusted_Connection=True;TrustServerCertificate=True" --project .\ASI.Basecode.WebApp
-dotnet user-secrets set "Smtp:Host" "smtp.example.edu" --project .\ASI.Basecode.WebApp
-dotnet user-secrets set "Smtp:Username" "noreply@example.edu" --project .\ASI.Basecode.WebApp
-dotnet user-secrets set "Smtp:Password" "replace-with-protected-secret" --project .\ASI.Basecode.WebApp
+dotnet user-secrets --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj set "ConnectionStrings:DefaultConnection" "Server=(localdb)\MSSQLLocalDB;Database=GearanteeDev;Trusted_Connection=True;TrustServerCertificate=True"
+dotnet user-secrets --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj set "Brevo:ApiKey" "YOUR_ACTUAL_BREVO_API_KEY"
+dotnet user-secrets --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj set "Brevo:SenderEmail" "your-verified-email@example.com"
 ```
 
-Production connection strings and SMTP credentials belong in protected IIS, Azure, or environment configuration.
+Production connection strings and Brevo credentials belong in protected IIS, Azure, or environment configuration. Use `Brevo__ApiKey` and `Brevo__SenderEmail` as production environment variable names.
 
 ## Database Setup
 
-The initial canonical migration is committed under `ASI.Basecode.Data/Migrations`. Apply it with:
+The initial canonical migration is committed under `ASI.Basecode.Data/Migrations`. Apply it with this one-line command:
 
 ```powershell
-dotnet ef database update `
-  --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj `
-  --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj --context AsiBasecodeDBContext
+```
+
+In Visual Studio Package Manager Console, set `ASI.Basecode.Data` as the Default project and `ASI.Basecode.WebApp` as the Startup Project, then run:
+
+```powershell
+Update-Database -Project ASI.Basecode.Data -StartupProject ASI.Basecode.WebApp -Context AsiBasecodeDBContext
+```
+
+For future model changes, create and apply a named migration:
+
+```powershell
+dotnet ef migrations add AddYourFeatureName --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj --context AsiBasecodeDBContext
+dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj --context AsiBasecodeDBContext
 ```
 
 Review generated migrations before applying them. Back up production SQL Server databases and test restoration before deployment.
@@ -102,19 +112,45 @@ Do not place the administrator password in `appsettings.json`.
 
 ## Tailwind CSS
 
-The frontend migration must configure Tailwind to scan MVC Razor Views and JavaScript, compile its source stylesheet to `ASI.Basecode.WebApp/wwwroot/css/app.css`, watch files during development, and generate a minified production build.
+Tailwind scans MVC Razor Views and JavaScript. The source stylesheet is `ASI.Basecode.WebApp/wwwroot/css/tailwind.src.css`; the compiled, minified `wwwroot/css/app.css` is checked in so the app can run without Node.js.
 
-Bootstrap references and Bootstrap-only view classes should be removed only after the corresponding views have been converted.
+From `ASI.Basecode.WebApp`, install the locked dependencies once, then run the watcher in a separate terminal while styling:
+
+```powershell
+npm ci
+npm run css:dev
+```
+
+Before submitting CSS or Razor class changes, create the minified production file:
+
+```powershell
+npm run css:build
+```
+
+The application layout loads the generated stylesheet. Bootstrap and the old template CSS have been removed; use Tailwind utility classes and the shared `.input` / `.btn-primary` component classes.
+
+## Preview the dashboards with sample data
+
+The development-only `--seed-demo` command creates idempotent dashboard sample rows and one account (`DEMO-001`) that has Borrower, Custodian, and Administrator roles. Set its password as a local secret first:
+
+```powershell
+dotnet user-secrets set "SeedDemo:Password" "choose-a-strong-local-password" --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj -- --seed-demo
+```
+
+Sign in with user code `DEMO-001` and the password you selected. Use the development-only role switcher to preview each dashboard. Do not use demo seed data in production.
 
 ## Run the Application
 
 ```powershell
 dotnet restore
 dotnet build
+dotnet test .\ASI.Basecode.sln
 dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
 ```
 
-Run the Tailwind development watcher in a separate terminal after its npm scripts have been added.
+For active UI work, run `npm ci` once and `npm run css:dev` in a separate terminal from `ASI.Basecode.WebApp`. The checked-in `app.css` is already available when running the site without Node.js.
 
 ## Current Implementation Status
 
@@ -127,9 +163,12 @@ Implemented:
 - Role-permission claims and authorization policies
 - Idempotent role/permission seeding with optional secure administrator creation
 - Database health endpoint at `/health/database`
+- Password-reset OTP flow with Brevo email delivery
+- Tailwind CSS build, shared responsive shell, and Tailwind-styled authentication pages
+- SQL-backed borrower, custodian, and administrator dashboard views
+- Development-only role switcher and demo dashboard data seeder
 
-Still planned:
+Still in progress:
 
-- Tailwind CSS migration
-- Forgot-password email flow
-- Role-specific dashboards and the equipment/reservation workflows
+- Dashboard polish and acceptance against the approved screen-size and role test matrix
+- Equipment, reservation, approval/release, return, calendar, and reporting workflows

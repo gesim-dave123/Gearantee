@@ -22,7 +22,7 @@ flowchart TD
 
 ### Password Reset
 
-The system uses **ASP.NET Core Identity** for password recovery.
+The system uses **ASP.NET Core Identity** for password recovery and Brevo for OTP delivery.
 
 ```mermaid
 flowchart TD
@@ -30,19 +30,20 @@ flowchart TD
     B --> C{Email Exists?}
 
     C -->|No| D[Display Generic Response]
-    C -->|Yes| E[ASP.NET Core Identity Generates Reset Token]
+    C -->|Yes| E[Generate and hash six-digit OTP]
 
-    E --> F[Send Password Reset URL]
-    F --> G[User Opens Reset URL]
-    G --> H{Token Valid?}
+    E --> F[Send OTP through Brevo]
+    F --> G[User enters OTP]
+    G --> H{OTP valid and within limits?}
 
-    H -->|No| I[Display Expired or Invalid Link]
-    H -->|Yes| J[Enter New Password]
+    H -->|No| I[Display Generic Error]
+    H -->|Yes| J[Consume OTP and create Identity reset token]
 
-    J --> K[Validate Password]
-    K -->|Invalid| J
-    K -->|Valid| L[Update Password]
-    L --> M[Password Reset Complete]
+    J --> K[Enter New Password]
+    K --> L[Validate Password]
+    L -->|Invalid| K
+    L -->|Valid| M[Update Password]
+    M --> N[Password Reset Complete]
 ```
 
 > **Database Note:** No custom `PASSWORD_RESET`, `OTP_CODE`, or `PASSWORD_RESET_TOKEN` table is required. The reset process is handled by ASP.NET Core Identity.
@@ -586,6 +587,6 @@ Check Late Return
         Application Access              New Password
 ```
 
-**Important:** The password-reset URL/token mechanism is an authentication implementation detail and does **not** introduce a custom entity into the business ERD.
+**Important:** The password-reset OTP/token mechanism is an authentication implementation detail and does **not** introduce a custom entity into the business ERD.
 
 ASP.NET Core Identity stores the account in `AspNetUsers` through the `ApplicationUser` model. School-specific borrowing fields and eligibility are stored separately in `BORROWER_PROFILE`.

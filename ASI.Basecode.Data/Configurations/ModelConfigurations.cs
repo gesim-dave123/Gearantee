@@ -108,20 +108,6 @@ namespace ASI.Basecode.Data.Configurations
         }
     }
 
-    public class LocationConfiguration : IEntityTypeConfiguration<Location>
-    {
-        public void Configure(EntityTypeBuilder<Location> builder)
-        {
-            builder.ToTable("Location");
-            builder.HasKey(x => x.LocationId);
-            builder.Property(x => x.LocationId).UseIdentityColumn();
-            builder.Property(x => x.LocationName).HasMaxLength(200).IsRequired();
-            builder.Property(x => x.Description).HasMaxLength(1000);
-            builder.Property(x => x.IsActive).HasDefaultValue(true);
-            builder.HasIndex(x => x.LocationName).IsUnique();
-        }
-    }
-
     public class EquipmentItemConfiguration : IEntityTypeConfiguration<EquipmentItem>
     {
         public void Configure(EntityTypeBuilder<EquipmentItem> builder)
@@ -131,6 +117,7 @@ namespace ASI.Basecode.Data.Configurations
             builder.Property(x => x.EquipmentId).UseIdentityColumn();
             builder.Property(x => x.ItemCode).HasMaxLength(100).IsRequired();
             builder.Property(x => x.ItemName).HasMaxLength(200).IsRequired();
+            builder.Property(x => x.Location).HasColumnType("varchar(200)").IsRequired();
             builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
             builder.Property(x => x.Brand).HasMaxLength(150);
             builder.Property(x => x.Model).HasMaxLength(150);
@@ -156,10 +143,6 @@ namespace ASI.Basecode.Data.Configurations
             builder.HasOne(x => x.Category)
                 .WithMany(x => x.EquipmentItems)
                 .HasForeignKey(x => x.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(x => x.Location)
-                .WithMany(x => x.EquipmentItems)
-                .HasForeignKey(x => x.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

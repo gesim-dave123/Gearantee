@@ -1,9 +1,14 @@
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Services.Interfaces;
+using ASI.Basecode.Services.Services;
+using ASI.Basecode.WebApp.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using System;
 
 namespace ASI.Basecode.WebApp
 {
@@ -13,8 +18,22 @@ namespace ASI.Basecode.WebApp
         {
             _services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             _services.TryAddSingleton<IActionContextAccessor, ActionContextAccessor>();
+            _services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             _services.AddScoped<IUnitOfWork, UnitOfWork>();
-            _services.AddHttpClient();
+            _services.Configure<BrevoOptions>(
+                Configuration.GetSection(BrevoOptions.SectionName));
+            _services.AddHttpClient<IBrevoEmailSender, BrevoEmailSender>(
+                (serviceProvider, client) =>
+                {
+                    var options = serviceProvider
+                        .GetRequiredService<IOptions<BrevoOptions>>()
+                        .Value;
+                    client.BaseAddress = new Uri(
+                        options.BaseUrl.TrimEnd('/') + "/");
+                });
+            _services.AddScoped<IPasswordResetOtpStore, IdentityPasswordResetOtpStore>();
+            _services.AddScoped<PasswordResetOtpService>();
+            _services.AddScoped<IDashboardService, DashboardService>();
         }
     }
 }

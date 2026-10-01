@@ -1,0 +1,12 @@
+{
+  "name": "gearantee-webapp",
+  "private": true,
+  "scripts": {
+    "css:dev": "tailwindcss -i ./wwwroot/css/tailwind.src.css -o ./wwwroot/css/app.css --watch",
+    "css:build": "tailwindcss -i ./wwwroot/css/tailwind.src.css -o ./wwwroot/css/app.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "tailwindcss": "^4.3.0"
+  }
+}

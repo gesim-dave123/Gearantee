@@ -17,7 +17,7 @@ namespace ASI.Basecode.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -275,8 +275,9 @@ namespace ASI.Basecode.Data.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Available");
 
-                    b.Property<long>("LocationId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Model")
                         .HasMaxLength(150)
@@ -297,8 +298,6 @@ namespace ASI.Basecode.Data.Migrations
 
                     b.HasIndex("ItemCode")
                         .IsUnique();
-
-                    b.HasIndex("LocationId");
 
                     b.HasIndex("SerialNumber")
                         .IsUnique()
@@ -350,36 +349,6 @@ namespace ASI.Basecode.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_LateReturn_Dates", "[ReturnedAt] > [DueAt] AND [DaysLate] >= 0");
                         });
-                });
-
-            modelBuilder.Entity("ASI.Basecode.Data.Models.Location", b =>
-                {
-                    b.Property<long>("LocationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("LocationId"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("LocationName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("LocationId");
-
-                    b.HasIndex("LocationName")
-                        .IsUnique();
-
-                    b.ToTable("Location", (string)null);
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.Permission", b =>
@@ -738,15 +707,7 @@ namespace ASI.Basecode.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ASI.Basecode.Data.Models.Location", "Location")
-                        .WithMany("EquipmentItems")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Category");
-
-                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.LateReturn", b =>
@@ -912,11 +873,6 @@ namespace ASI.Basecode.Data.Migrations
             modelBuilder.Entity("ASI.Basecode.Data.Models.EquipmentItem", b =>
                 {
                     b.Navigation("Reservations");
-                });
-
-            modelBuilder.Entity("ASI.Basecode.Data.Models.Location", b =>
-                {
-                    b.Navigation("EquipmentItems");
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.Permission", b =>

@@ -75,14 +75,12 @@ namespace ASI.Basecode.Tests.Dashboard
             string categoryName = "Laptops")
         {
             var category = Category(db, categoryName);
-            var location = db.Locations.FirstOrDefault()
-                ?? db.Locations.Add(new Location { LocationName = "Main Room" }).Entity;
             db.SaveChanges();
 
             var item = new EquipmentItem
             {
                 CategoryId = category.CategoryId,
-                LocationId = location.LocationId,
+                Location = "Main Room",
                 ItemCode = code,
                 ItemName = code,
                 ConditionStatus = DomainValues.ReturnConditions.Good,

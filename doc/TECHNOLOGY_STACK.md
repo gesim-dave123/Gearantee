@@ -105,7 +105,7 @@ ASP.NET Core MVC application
                   │
                   ▼
           Microsoft SQL Server
- Identity | Profiles | Permissions | Categories | Locations | Items
+ Identity | Profiles | Permissions | Categories | Items (location text)
  Reservations | Releases | Returns | Late returns | Audit fields
 ```
 
@@ -117,7 +117,7 @@ ASP.NET Core MVC application
 | Forgot Password | ASP.NET Core Identity, Brevo API, SQL Server | Rate-limits OTP requests, stores a hashed OTP, verifies it atomically, and securely updates the password hash. |
 | User and role management | ASP.NET Core Identity, EF Core, SQL Server | Creates/deactivates accounts and assigns roles. |
 | Borrower profiles | MVC, EF Core, SQL Server | Maintains school ID, department, contact information, and eligibility separately from authentication data. |
-| Equipment management | MVC, EF Core, SQL Server | Maintains categories, locations, physical items, conditions, and statuses. |
+| Equipment management | MVC, EF Core, SQL Server | Maintains categories, physical items, each item's location text, conditions, and statuses. |
 | Reservation requests | MVC, server validation, EF Core, SQL Server | Stores one equipment item per reservation after eligibility and schedule validation. |
 | Conflict prevention | C# business service, SQL Server transaction/query | Prevents overlapping approved reservations or active loans for an item. |
 | Approval and release | Authorization policies, EF Core, SQL Server | Restricts decisions and handover records to authorized staff. |

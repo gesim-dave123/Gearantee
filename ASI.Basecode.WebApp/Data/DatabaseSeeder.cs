@@ -270,10 +270,8 @@ namespace ASI.Basecode.WebApp.Data
                 dbContext, "DEMO-PROJ", "Projectors");
             var cameraCategory = await GetOrAddCategoryAsync(
                 dbContext, "DEMO-CAM", "Cameras");
-            var mainLocation = await GetOrAddLocationAsync(
-                dbContext, "Main Equipment Room");
-            var stageLocation = await GetOrAddLocationAsync(
-                dbContext, "Stage Store");
+            const string mainLocation = "Main Equipment Room";
+            const string stageLocation = "Stage Store";
 
             var dueItem = await GetOrAddEquipmentAsync(
                 dbContext, "DEMO-LAP-001", "Lenovo ThinkPad L14", laptopCategory,
@@ -410,34 +408,12 @@ namespace ASI.Basecode.WebApp.Data
             return category;
         }
 
-        private static async Task<Location> GetOrAddLocationAsync(
-            AsiBasecodeDBContext dbContext,
-            string name)
-        {
-            var location = await dbContext.Locations
-                .SingleOrDefaultAsync(item => item.LocationName == name);
-            if (location != null)
-            {
-                return location;
-            }
-
-            location = new Location
-            {
-                LocationName = name,
-                Description = "Development sample storage location.",
-                IsActive = true
-            };
-            dbContext.Locations.Add(location);
-            await dbContext.SaveChangesAsync();
-            return location;
-        }
-
         private static async Task<EquipmentItem> GetOrAddEquipmentAsync(
             AsiBasecodeDBContext dbContext,
             string code,
             string name,
             EquipmentCategory category,
-            Location location,
+            string location,
             string status)
         {
             var item = await dbContext.EquipmentItems
@@ -450,7 +426,7 @@ namespace ASI.Basecode.WebApp.Data
             item = new EquipmentItem
             {
                 CategoryId = category.CategoryId,
-                LocationId = location.LocationId,
+                Location = location,
                 ItemCode = code,
                 ItemName = name,
                 Description = "Seeded sample equipment for dashboard previews.",

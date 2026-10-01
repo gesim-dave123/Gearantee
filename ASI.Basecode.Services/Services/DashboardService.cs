@@ -37,7 +37,7 @@ namespace ASI.Basecode.Services.Services
                     : (reservation.ReviewedByUser.FirstName + " " +
                         reservation.ReviewedByUser.LastName).Trim(),
                 CategoryName = reservation.EquipmentItem.Category.CategoryName,
-                LocationName = reservation.EquipmentItem.Location.LocationName,
+                LocationName = reservation.EquipmentItem.Location,
                 ImageUrl = reservation.EquipmentItem.ImageUrl,
                 ReleaseRecordId = reservation.ReleaseRecord == null
                     ? (long?)null
@@ -240,7 +240,7 @@ namespace ASI.Basecode.Services.Services
                     ItemName = item.ItemName,
                     ItemStatus = item.ItemStatus,
                     ConditionStatus = item.ConditionStatus,
-                    LocationName = item.Location.LocationName
+                    LocationName = item.Location
                 })
                 .ToListAsync();
 

@@ -14,6 +14,7 @@ This document is the source of truth for the Version 1 database design. It repla
 - A borrower who needs multiple items creates one reservation per item.
 - `RELEASE_RECORD`, `RETURN_RECORD`, and `LATE_RETURN` are zero-or-one extensions of the preceding lifecycle record.
 - Current physical equipment state is stored on `EQUIPMENT_ITEM`; schedule availability is calculated from approved reservations and active releases.
+- Each equipment item stores its location as required `VARCHAR(200)` text; there is no separate location table or foreign key.
 - SQL Server types and constraints are used throughout.
 
 ## 2. Canonical Entity Relationship Diagram
@@ -27,7 +28,6 @@ erDiagram
 
     APPLICATION_USER ||--o| BORROWER_PROFILE : has
     EQUIPMENT_CATEGORY ||--o{ EQUIPMENT_ITEM : classifies
-    LOCATION ||--o{ EQUIPMENT_ITEM : stores
 
     BORROWER_PROFILE ||--o{ RESERVATION : creates
     EQUIPMENT_ITEM ||--o{ RESERVATION : requested_for
@@ -93,17 +93,10 @@ erDiagram
         datetime2 updated_at
     }
 
-    LOCATION {
-        bigint location_id PK
-        nvarchar location_name UK
-        nvarchar description
-        bit is_active
-    }
-
     EQUIPMENT_ITEM {
         bigint equipment_id PK
         bigint category_id FK
-        bigint location_id FK
+        varchar location
         nvarchar item_code UK
         nvarchar item_name
         nvarchar description
@@ -256,22 +249,13 @@ Only accounts that can borrow need a borrower profile. Authentication state and 
 | `created_at` | `DATETIME2` | Not null | Creation time. |
 | `updated_at` | `DATETIME2` | Not null | Last update time. |
 
-### 5.2 LOCATION
-
-| Column | SQL Server type | Key/nullability | Description |
-| --- | --- | --- | --- |
-| `location_id` | `BIGINT IDENTITY(1,1)` | PK | Location identifier. |
-| `location_name` | `NVARCHAR(200)` | UK, not null | Storage or facility name. |
-| `description` | `NVARCHAR(1000)` | Null | Additional details. |
-| `is_active` | `BIT` | Not null | Whether the location can be assigned. |
-
-### 5.3 EQUIPMENT_ITEM
+### 5.2 EQUIPMENT_ITEM
 
 | Column | SQL Server type | Key/nullability | Description |
 | --- | --- | --- | --- |
 | `equipment_id` | `BIGINT IDENTITY(1,1)` | PK | Physical item identifier. |
 | `category_id` | `BIGINT` | FK, not null | References `EQUIPMENT_CATEGORY`. |
-| `location_id` | `BIGINT` | FK, not null | References `LOCATION`. |
+| `location` | `VARCHAR(200)` | Not null | Storage or facility location, entered on the item; no foreign key. |
 | `item_code` | `NVARCHAR(100)` | UK, not null | Institutional inventory code. |
 | `item_name` | `NVARCHAR(200)` | Not null | Display name. |
 | `description` | `NVARCHAR(MAX)` | Null | Detailed description. |
@@ -284,6 +268,8 @@ Only accounts that can borrow need a borrower profile. Authentication state and 
 | `is_archived` | `BIT` | Not null | Prevents future transactions when true. |
 | `created_at` | `DATETIME2` | Not null | Creation time. |
 | `updated_at` | `DATETIME2` | Not null | Last update time. |
+
+Location text may repeat across items. Renaming a location requires updating each affected item; the migration stops if an existing name cannot be converted to `VARCHAR(200)` without data loss.
 
 Required filtered index:
 
@@ -386,7 +372,6 @@ A late-return row may exist only when `returned_at > due_at`. The application de
 | `PERMISSION` | `ROLE_PERMISSION` | 1:M | `permission_id` |
 | `AspNetUsers` | `BORROWER_PROFILE` | 1:0..1 | `user_id` |
 | `EQUIPMENT_CATEGORY` | `EQUIPMENT_ITEM` | 1:M | `category_id` |
-| `LOCATION` | `EQUIPMENT_ITEM` | 1:M | `location_id` |
 | `BORROWER_PROFILE` | `RESERVATION` | 1:M | `borrower_profile_id` |
 | `EQUIPMENT_ITEM` | `RESERVATION` | 1:M | `equipment_id` |
 | `AspNetUsers` | `RESERVATION` | 1:M | `reviewed_by_user_id` |
@@ -399,7 +384,7 @@ A late-return row may exist only when `returned_at > due_at`. The application de
 ## 8. Delete and History Rules
 
 - Do not cascade-delete users, borrower profiles, equipment, reservations, releases, or returns when historical records exist.
-- Deactivate accounts, categories, and locations instead of deleting them.
+- Deactivate accounts and categories instead of deleting them.
 - Archive equipment instead of deleting it.
 - Restrict deletion of referenced master data.
 - Preserve Identity users involved in historical transactions; disable sign-in through `is_active` and Identity lockout as appropriate.
@@ -432,11 +417,10 @@ flowchart TD
 5. `ROLE_PERMISSION`
 6. `BORROWER_PROFILE`
 7. `EQUIPMENT_CATEGORY`
-8. `LOCATION`
-9. `EQUIPMENT_ITEM`
-10. `RESERVATION`
-11. `RELEASE_RECORD`
-12. `RETURN_RECORD`
-13. `LATE_RETURN`
+8. `EQUIPMENT_ITEM`
+9. `RESERVATION`
+10. `RELEASE_RECORD`
+11. `RETURN_RECORD`
+12. `LATE_RETURN`
 
 Other ASP.NET Core Identity support tables are created by Identity migrations but are omitted from this business-focused ERD.

@@ -340,6 +340,7 @@ Shared rows count for each assigned member.
 | 9/28/2026 | Enabled CI checks for all branches | Laroco | — |
 | 9/29/2026 | Removed Bootstrap/template styling and added Tailwind build assets | Laroco | — |
 | 9/30/2026 | Addressed dashboard PR review findings and added regression tests | Laroco | #21 |
+| 10/1/2026 | Replaced the equipment location lookup with required `VARCHAR(200)` item text and a data-copy migration | Laroco | — |
 
 ## Open questions
 
@@ -370,3 +371,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 9/28/2026 | Moved WBS 9.00–12.00 to In Review for PR #19 and aligned password-reset documentation with the OTP/Brevo implementation | Bansag |
 | 9/29/2026 | Started WBS 5.00–7.00 dashboard implementation; added SQL-backed dashboards, shared responsive shell, Tailwind build, and demo seeding | Laroco |
 | 9/30/2026 | Addressed PR #21 review findings TEST-01, OPS-01, UX-01, and P3-01–P3-05 | Laroco |
+| 10/1/2026 | Removed the Location entity and updated the schema, dashboards, demo seed, and ERD for item location text | Laroco |

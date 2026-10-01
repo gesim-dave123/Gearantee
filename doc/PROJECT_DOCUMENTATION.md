@@ -143,8 +143,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 | Identity Role / User Role | Role assignment | Identity role ID/name and user-role association |
 | Permission / Role Permission | Fine-grained authorization | Permission name and role-permission association |
 | Equipment Category | Equipment grouping | Category ID, name, active status |
-| Location | Controlled storage/facility location | Location ID, name, active status |
-| Equipment Item | Individual trackable item | Item ID/code, category, location, name/model, serial number, image URL/path, condition, operational status |
+| Equipment Item | Individual trackable item | Item ID/code, category, free-text `VARCHAR(200)` location, name/model, serial number, image URL/path, condition, operational status |
 | Reservation | Requested schedule for exactly one item | Reservation ID, borrower profile, equipment item, purpose, requested release/return dates, status, reviewer |
 | Release Record | Confirmation of handover | Release ID, reservation, custodian, actual release time, notes |
 | Return Record | Confirmation of return and inspection | Return ID, release/reservation, custodian, actual return time, condition, notes |

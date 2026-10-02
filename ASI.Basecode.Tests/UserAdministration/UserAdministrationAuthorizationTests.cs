@@ -23,6 +23,7 @@ namespace ASI.Basecode.Tests.UserAdministration
 
         [Theory]
         [InlineData(nameof(UsersController.Create))]
+        [InlineData(nameof(UsersController.Import))]
         [InlineData(nameof(UsersController.Edit))]
         [InlineData(nameof(UsersController.SetActive))]
         [InlineData(nameof(UsersController.Permissions))]

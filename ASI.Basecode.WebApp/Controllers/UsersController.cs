@@ -3,8 +3,8 @@ using ASI.Basecode.WebApp.Models;
 using ASI.Basecode.WebApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace ASI.Basecode.WebApp.Controllers
@@ -20,6 +20,52 @@ namespace ASI.Basecode.WebApp.Controllers
         public UsersController(IUserAdministrationService userAdministration)
         {
             _userAdministration = userAdministration;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Import()
+        {
+            if (!await _userAdministration.CanManageAsync(UserId)) return Forbid();
+            ViewData["Title"] = "Import accounts";
+            ViewData["Eyebrow"] = "Administration";
+            return View(new ImportUsersViewModel());
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ImportTemplate()
+        {
+            if (!await _userAdministration.CanManageAsync(UserId)) return Forbid();
+            return File(System.Text.Encoding.UTF8.GetBytes(UserImportCsv.Header + "\r\n"),
+                "text/csv; charset=utf-8", "gearantee-users-template.csv");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(UserImportCsv.MaxRequestBytes)]
+        [RequestFormLimits(MultipartBodyLengthLimit = UserImportCsv.MaxFileBytes,
+            MemoryBufferThreshold = UserImportCsv.MaxRequestBytes)]
+        public async Task<IActionResult> Import(IFormFile csvFile)
+        {
+            if (!await _userAdministration.CanManageAsync(UserId)) return Forbid();
+            ViewData["Title"] = "Import accounts";
+            ViewData["Eyebrow"] = "Administration";
+            if (csvFile == null || csvFile.Length == 0 || csvFile.Length > UserImportCsv.MaxFileBytes)
+                return View(new ImportUsersViewModel
+                {
+                    Errors = new[] { new UserImportError(0, "File", "Choose a non-empty UTF-8 CSV file no larger than 1 MiB.") }
+                });
+
+            using var stream = csvFile.OpenReadStream();
+            var parsed = await UserImportCsv.ParseAsync(stream, HttpContext.RequestAborted);
+            if (parsed.Errors.Count > 0)
+                return View(new ImportUsersViewModel { Errors = parsed.Errors });
+            var result = await _userAdministration.ImportAsync(UserId, parsed.Rows);
+            if (result.Forbidden) return Forbid();
+            if (result.Errors.Count > 0)
+                return View(new ImportUsersViewModel { Errors = result.Errors });
+
+            TempData["SuccessMessage"] = $"Imported {result.CreatedCount} accounts.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]
@@ -130,7 +176,20 @@ namespace ASI.Basecode.WebApp.Controllers
 
             if (!ModelState.IsValid)
             {
-                model.AvailableRoles = await GetRoleOptionsAsync();
+                var current = await _userAdministration.GetUserAsync(UserId, model.Id);
+                if (current == null)
+                {
+                    return await _userAdministration.CanManageAsync(UserId)
+                        ? NotFound() : Forbid();
+                }
+
+                model.UserCode = current.UserCode;
+                model.IsActive = current.IsActive;
+                model.AvailableRoles = current.AvailableRoles;
+                model.SelectedRoles ??= new System.Collections.Generic.List<string>();
+                ModelState.Remove(nameof(model.UserCode));
+                ModelState.Remove(nameof(model.IsActive));
+                // Keep the submitted edit stamp so stale changes still conflict.
                 ViewData["Title"] = "Edit account";
                 ViewData["Eyebrow"] = "Administration";
                 return View(model);
@@ -209,11 +268,5 @@ namespace ASI.Basecode.WebApp.Controllers
         private string UserId => User.FindFirst(
             System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        private async Task<System.Collections.Generic.IReadOnlyList<RoleOptionViewModel>>
-            GetRoleOptionsAsync()
-        {
-            var model = await _userAdministration.GetRolePermissionsAsync(UserId);
-            return model?.Roles ?? Array.Empty<RoleOptionViewModel>();
-        }
     }
 }

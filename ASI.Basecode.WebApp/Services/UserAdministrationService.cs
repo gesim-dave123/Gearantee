@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace ASI.Basecode.WebApp.Services
 {
-    public class UserAdministrationService : IUserAdministrationService
+    public partial class UserAdministrationService : IUserAdministrationService
     {
         private const int PageSize = 10;
         private const string AdministrationLockName = "Gearantee.UserAdministration";
@@ -52,7 +52,7 @@ namespace ASI.Basecode.WebApp.Services
                 return false;
             }
 
-            var actor = await _userManager.FindByIdAsync(actorUserId);
+            var actor = await _db.Users.AsNoTracking().SingleOrDefaultAsync(user => user.Id == actorUserId);
             if (actor == null || !actor.IsActive)
             {
                 return false;
@@ -269,28 +269,19 @@ namespace ASI.Basecode.WebApp.Services
             };
         }
 
-        public async Task<UserAdministrationResult> CreateAsync(
+        private async Task<UserAdministrationResult> CreateAccountCoreAsync(
             string actorUserId,
             CreateUserViewModel model)
         {
-            await using var transaction = await BeginAdministrationTransactionAsync();
-            if (!await CanManageAsync(actorUserId))
-            {
-                await transaction.RollbackAsync();
-                return UserAdministrationResult.AccessDenied();
-            }
-
             var role = await _roleManager.FindByNameAsync(model.RoleName?.Trim());
             if (role == null || !IsSupportedRole(role.Name))
             {
-                await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure("Choose a valid system role.");
             }
 
             if (await _userManager.FindByEmailAsync(model.Email.Trim()) != null ||
                 await _db.Users.AnyAsync(user => user.UserCode == model.UserCode.Trim()))
             {
-                await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure(
                     "An account with that email or user code already exists.");
             }
@@ -299,7 +290,6 @@ namespace ASI.Basecode.WebApp.Services
                 (string.IsNullOrWhiteSpace(model.SchoolId) ||
                  string.IsNullOrWhiteSpace(model.Department)))
             {
-                await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure(
                     "Borrower accounts need a school ID and department.");
             }
@@ -321,14 +311,12 @@ namespace ASI.Basecode.WebApp.Services
                 var created = await _userManager.CreateAsync(user, model.Password);
                 if (!created.Succeeded)
                 {
-                    await transaction.RollbackAsync();
                     return UserAdministrationResult.Failure(IdentityErrors(created));
                 }
 
                 var addedRole = await _userManager.AddToRoleAsync(user, role.Name);
                 if (!addedRole.Succeeded)
                 {
-                    await transaction.RollbackAsync();
                     return IdentityFailure(addedRole);
                 }
 
@@ -340,7 +328,6 @@ namespace ASI.Basecode.WebApp.Services
                     if (await _db.BorrowerProfiles.AnyAsync(profile =>
                         profile.SchoolId == schoolId))
                     {
-                        await transaction.RollbackAsync();
                         return UserAdministrationResult.Failure(
                             "A borrower profile already uses that school ID.");
                     }
@@ -364,12 +351,10 @@ namespace ASI.Basecode.WebApp.Services
                     role.Name
                 });
                 await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
                 return UserAdministrationResult.Success("Account created.");
             }
             catch (DbUpdateException exception) when (IsUniqueViolation(exception))
             {
-                await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure(
                     "The email, user code, or school ID is already in use.");
             }
@@ -428,7 +413,7 @@ namespace ASI.Basecode.WebApp.Services
                     DomainValues.Roles.Administrator) &&
                 !selectedRoles.Contains(DomainValues.Roles.Administrator,
                     StringComparer.OrdinalIgnoreCase);
-            if (removesAdministrator && await CountActiveAdministratorsAsync() <= 1)
+            if (user.IsActive && removesAdministrator && await CountActiveAdministratorsAsync() <= 1)
             {
                 await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure(
@@ -591,6 +576,13 @@ namespace ASI.Basecode.WebApp.Services
                 await transaction.RollbackAsync();
                 return UserAdministrationResult.Stale(
                     "This account changed after you opened it. Reload the page and try again.");
+            }
+
+            if (user.IsActive == model.IsActive)
+            {
+                await transaction.RollbackAsync();
+                return UserAdministrationResult.Success(
+                    user.IsActive ? "Account is already active." : "Account is already deactivated.");
             }
 
             if (!model.IsActive && user.Id == actorUserId)

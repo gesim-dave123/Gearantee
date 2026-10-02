@@ -5,6 +5,8 @@ namespace ASI.Basecode.WebApp.Services
 {
     public interface IUserAdministrationService
     {
+        Task<UserImportResult> ImportAsync(string actorUserId,
+            System.Collections.Generic.IReadOnlyList<UserImportRow> rows);
         Task<bool> CanManageAsync(string actorUserId);
         Task<UserAccountsIndexViewModel> GetAccountsAsync(
             string actorUserId,

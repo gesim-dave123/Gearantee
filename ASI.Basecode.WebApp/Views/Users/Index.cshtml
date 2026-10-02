@@ -29,7 +29,10 @@
                 <h2 id="accounts-heading" class="font-display text-2xl font-semibold">User accounts</h2>
                 <p class="mt-1 text-xs text-gray-500">@Model.TotalCount account@(Model.TotalCount == 1 ? "" : "s") · deactivation preserves borrowing history</p>
             </div>
-            <a asp-action="Create" class="btn-primary min-h-10">+ New user</a>
+            <div class="flex flex-wrap gap-2">
+                <a asp-action="Import" class="border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-primary-strong">Import CSV</a>
+                <a asp-action="Create" class="btn-primary min-h-10">+ New user</a>
+            </div>
         </div>
 
         <form method="get" asp-action="Index" class="mb-4 grid gap-2 sm:grid-cols-[minmax(180px,1fr)_150px_165px_auto]">

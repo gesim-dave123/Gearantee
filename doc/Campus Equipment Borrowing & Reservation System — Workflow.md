@@ -405,6 +405,8 @@ flowchart TD
 
 The administrator functions include account creation, bulk CSV account creation, role assignment, permission configuration, user deactivation, and equipment/category management.
 
+Bulk account creation is available from **Users & Roles → Import CSV** under WBS 15.00. An authorized active administrator uploads a UTF-8 CSV containing at most 100 accounts (1 MiB). All rows must pass validation; the complete batch, including role assignments, borrower profiles, and audit records, commits in one transaction or rolls back together. New borrower profiles start ineligible. Uploads contain initial passwords and are processed in memory without retaining the original file or including passwords in errors/audit records. See [CSV import instructions](USER_CSV_IMPORT.md) for the template and operational details.
+
 ---
 
 ## 13. Complete System Workflow

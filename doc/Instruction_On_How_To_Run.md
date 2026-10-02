@@ -149,6 +149,8 @@ dotnet watch --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
 
 ## Common problems
 
+For bulk user creation, sign in as an active administrator with user-management permission, open **Users & Roles → Import CSV**, and follow the [CSV import instructions](USER_CSV_IMPORT.md). No additional migration is required for the CSV feature beyond the existing user-administration migration.
+
 ### LocalDB does not start
 
 ```powershell

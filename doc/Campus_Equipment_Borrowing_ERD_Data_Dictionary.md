@@ -25,6 +25,8 @@ erDiagram
     APPLICATION_USER ||--o{ USER_ROLE : receives
     IDENTITY_ROLE ||--o{ ROLE_PERMISSION : grants
     PERMISSION ||--o{ ROLE_PERMISSION : assigned_through
+    IDENTITY_ROLE ||--o| ROLE_PERMISSION_SEED : initializes
+    APPLICATION_USER ||--o{ ADMINISTRATION_AUDIT_EVENT : performs
 
     APPLICATION_USER ||--o| BORROWER_PROFILE : has
     EQUIPMENT_CATEGORY ||--o{ EQUIPMENT_ITEM : classifies
@@ -70,6 +72,20 @@ erDiagram
     ROLE_PERMISSION {
         nvarchar role_id PK, FK
         bigint permission_id PK, FK
+    }
+
+    ROLE_PERMISSION_SEED {
+        nvarchar role_id PK, FK
+    }
+
+    ADMINISTRATION_AUDIT_EVENT {
+        bigint audit_event_id PK
+        nvarchar actor_user_id FK
+        nvarchar target_user_id FK
+        nvarchar target_role_id FK
+        nvarchar action
+        nvarchar details_json
+        datetime2 occurred_at
     }
 
     BORROWER_PROFILE {
@@ -161,6 +177,12 @@ erDiagram
 ```
 
 ## 3. Identity and Authorization
+
+### 3.0 User Administration Support
+
+`AdministrationAuditEvent` records account creation/updates, role-permission changes, and account activation/deactivation. It stores the acting user, optional target user or role, action, selected before/after details, and a UTC `DATETIME2` timestamp. Passwords, password hashes, OTPs, and Identity reset tokens are never recorded. Audit rows are committed in the same transaction as each administrative change.
+
+`RolePermissionSeed` has one row per Identity role after its initial default permission assignments are provisioned. It prevents later `--seed` runs from restoring grants an administrator intentionally removed. The user-administration migration marks existing roles that already have grants as initialized; roles without grants receive defaults on the next seed run. A fresh database gets defaults when `--seed` first creates its roles.
 
 ### 3.1 APPLICATION_USER / `AspNetUsers`
 
@@ -422,5 +444,7 @@ flowchart TD
 10. `RELEASE_RECORD`
 11. `RETURN_RECORD`
 12. `LATE_RETURN`
+13. `ADMINISTRATION_AUDIT_EVENT`
+14. `ROLE_PERMISSION_SEED`
 
 Other ASP.NET Core Identity support tables are created by Identity migrations but are omitted from this business-focused ERD.

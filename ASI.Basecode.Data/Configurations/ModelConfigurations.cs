@@ -19,6 +19,56 @@ namespace ASI.Basecode.Data.Configurations
                 .HasColumnType("datetime2")
                 .HasDefaultValueSql("SYSUTCDATETIME()");
             builder.HasIndex(x => x.UserCode).IsUnique();
+            builder.HasIndex(x => x.NormalizedEmail)
+                .IsUnique()
+                .HasFilter("[NormalizedEmail] IS NOT NULL")
+                .HasDatabaseName("EmailIndex");
+        }
+    }
+
+    public class RolePermissionSeedConfiguration : IEntityTypeConfiguration<RolePermissionSeed>
+    {
+        public void Configure(EntityTypeBuilder<RolePermissionSeed> builder)
+        {
+            builder.ToTable("RolePermissionSeed");
+            builder.HasKey(x => x.RoleId);
+            builder.Property(x => x.RoleId).HasMaxLength(450);
+            builder.HasOne<Microsoft.AspNetCore.Identity.IdentityRole>()
+                .WithMany()
+                .HasForeignKey(x => x.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    public class AdministrationAuditEventConfiguration : IEntityTypeConfiguration<AdministrationAuditEvent>
+    {
+        public void Configure(EntityTypeBuilder<AdministrationAuditEvent> builder)
+        {
+            builder.ToTable("AdministrationAuditEvent");
+            builder.HasKey(x => x.AdministrationAuditEventId);
+            builder.Property(x => x.AdministrationAuditEventId).UseIdentityColumn();
+            builder.Property(x => x.ActorUserId).HasMaxLength(450).IsRequired();
+            builder.Property(x => x.TargetUserId).HasMaxLength(450);
+            builder.Property(x => x.TargetRoleId).HasMaxLength(450);
+            builder.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            builder.Property(x => x.DetailsJson).HasColumnType("nvarchar(max)");
+            builder.Property(x => x.OccurredAt)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+            builder.HasIndex(x => x.OccurredAt);
+            builder.HasIndex(x => x.TargetUserId);
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.ActorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.TargetUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            builder.HasOne<Microsoft.AspNetCore.Identity.IdentityRole>()
+                .WithMany()
+                .HasForeignKey(x => x.TargetRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 

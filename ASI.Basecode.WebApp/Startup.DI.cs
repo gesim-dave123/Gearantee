@@ -34,6 +34,7 @@ namespace ASI.Basecode.WebApp
             _services.AddScoped<IPasswordResetOtpStore, IdentityPasswordResetOtpStore>();
             _services.AddScoped<PasswordResetOtpService>();
             _services.AddScoped<IDashboardService, DashboardService>();
+            _services.AddScoped<IUserAdministrationService, UserAdministrationService>();
         }
     }
 }

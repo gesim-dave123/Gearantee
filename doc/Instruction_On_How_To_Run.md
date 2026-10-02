@@ -56,7 +56,7 @@ Server=(localdb)\MSSQLLocalDB;Database=GearanteeDev
 
 ## 3. Apply the EF Core database schema
 
-The repository already contains the initial migration. Creating `GearanteeDev` only creates an empty database, so apply the migration to create the Identity and application tables.
+The repository contains the canonical schema and feature migrations. Creating `GearanteeDev` only creates an empty database, so apply all pending migrations to create/update the Identity and application tables.
 
 If you cloned the repository, restore the local EF CLI tool once before running the commands:
 
@@ -148,6 +148,8 @@ dotnet watch --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
 ```
 
 ## Common problems
+
+For bulk user creation, sign in as an active administrator with user-management permission, open **Users & Roles → Import CSV**, and follow the [CSV import instructions](USER_CSV_IMPORT.md). No additional migration is required for the CSV feature beyond the existing user-administration migration.
 
 ### LocalDB does not start
 

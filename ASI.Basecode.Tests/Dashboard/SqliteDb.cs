@@ -9,6 +9,7 @@ namespace ASI.Basecode.Tests.Dashboard
     public sealed class SqliteDb : IDisposable
     {
         private readonly SqliteConnection _connection;
+        public SqliteConnection Connection => _connection;
 
         public SqliteDb()
         {

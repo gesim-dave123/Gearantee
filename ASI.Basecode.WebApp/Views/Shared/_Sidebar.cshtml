@@ -6,6 +6,7 @@
     var isCustodian = User.IsInRole(DomainValues.Roles.Custodian);
     var isBorrower = User.IsInRole(DomainValues.Roles.Borrower);
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var workspace = currentAction switch
     {
         "Borrower" => "Borrower workspace",
@@ -47,7 +48,7 @@
 
     <p class="eyebrow mb-3">@workspace</p>
     <nav class="flex-1 space-y-1" aria-label="Workspace">
-        <a asp-controller="Dashboard" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" || ViewContext.RouteData.Values["action"]?.ToString() == "Borrower" || ViewContext.RouteData.Values["action"]?.ToString() == "Custodian" || ViewContext.RouteData.Values["action"]?.ToString() == "Administrator" ? "nav-item-active" : "")">
+        <a asp-controller="Dashboard" asp-action="Index" class="nav-item @(currentController == "Dashboard" ? "nav-item-active" : "")">
             @await Html.PartialAsync("Icons/_Icon", "dashboard")<span>Dashboard</span>
         </a>
 
@@ -82,7 +83,7 @@
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.UserRoleManage))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "users")<span class="flex-1">Users &amp; roles</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="Users" asp-action="Index" class="nav-item @(currentController == "Users" ? "nav-item-active" : "")" aria-current="@(currentController == "Users" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "users")<span>Users &amp; roles</span></a>
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
         {

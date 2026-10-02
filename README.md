@@ -61,7 +61,7 @@ Production connection strings and Brevo credentials belong in protected IIS, Azu
 
 ## Database Setup
 
-The initial canonical migration is committed under `ASI.Basecode.Data/Migrations`. Apply it with this one-line command:
+The canonical schema and feature migrations are committed under `ASI.Basecode.Data/Migrations`. Run this command after the first database setup and whenever you pull a change that adds a migration; it applies all pending migrations:
 
 ```powershell
 dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj --context AsiBasecodeDBContext
@@ -82,6 +82,8 @@ dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj
 
 Review generated migrations before applying them. Back up production SQL Server databases and test restoration before deployment.
 
+The user-administration migration adds audit and permission-seed tables, and makes normalized Identity email unique. It checks for existing duplicate email addresses before changing the index; if any are found, the migration stops without changing the schema, and those duplicates must be resolved first.
+
 The default non-secret development connection targets:
 
 ```text
@@ -100,7 +102,7 @@ dotnet run --no-build `
   -- --seed
 ```
 
-It always seeds the three roles, eight permissions, and documented role-permission assignments. It creates an administrator only when these user-secret values are present:
+It ensures the three roles and eight permissions exist. Default role grants are initialized once and subsequent seed runs preserve permission changes made through Users & Roles. An existing account configured as the bootstrap administrator is not silently re-promoted if its role was removed. The command creates the initial administrator only when these user-secret values are present:
 
 ```powershell
 dotnet user-secrets set "SeedAdmin:Email" "admin@example.edu" --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
@@ -165,6 +167,7 @@ Implemented:
 - Database health endpoint at `/health/database`
 - Password-reset OTP flow with Brevo email delivery
 - Tailwind CSS build, shared responsive shell, and Tailwind-styled authentication pages
+- Administrator user management with single and atomic bulk CSV account creation, role assignment, permission matrix, and account activation controls (see [CSV import instructions](doc/USER_CSV_IMPORT.md))
 - SQL-backed borrower, custodian, and administrator dashboard views
 - Development-only role switcher and demo dashboard data seeder
 

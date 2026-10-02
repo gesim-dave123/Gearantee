@@ -20,6 +20,8 @@ namespace ASI.Basecode.Data
 
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<RolePermissionSeed> RolePermissionSeeds { get; set; }
+        public DbSet<AdministrationAuditEvent> AdministrationAuditEvents { get; set; }
         public DbSet<BorrowerProfile> BorrowerProfiles { get; set; }
         public DbSet<EquipmentCategory> EquipmentCategories { get; set; }
         public DbSet<EquipmentItem> EquipmentItems { get; set; }

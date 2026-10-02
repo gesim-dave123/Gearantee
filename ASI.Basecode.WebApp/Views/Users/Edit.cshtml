@@ -1,0 +1,99 @@
+@model ASI.Basecode.WebApp.Models.EditUserViewModel
+@{
+    var successMessage = ViewData["SuccessMessage"] as string;
+    var errorMessage = ViewData["ErrorMessage"] as string;
+}
+
+<div class="mx-auto max-w-4xl">
+    <a asp-action="Index" class="mb-5 inline-flex text-sm font-semibold text-primary-strong underline underline-offset-4">← Back to users &amp; roles</a>
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="mb-5 border-l-4 border-primary bg-white px-4 py-3 text-sm" role="status">@successMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@errorMessage</div>
+    }
+    <section class="border border-gray-200 bg-white p-5 sm:p-8">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="item-code">@Model.UserCode</p>
+                <h2 class="mt-1 font-display text-2xl font-semibold">Edit account</h2>
+                <p class="mt-1 text-sm text-gray-500">User code: <span class="font-semibold text-gray-700">@Model.UserCode</span></p>
+            </div>
+            <span class="inline-flex border px-2 py-1 text-xs @(Model.IsActive ? "border-primary text-primary-strong" : "border-gray-200 text-gray-500")">@(Model.IsActive ? "Active" : "Deactivated")</span>
+        </div>
+
+        <form asp-action="Edit" method="post" class="mt-6">
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="ConcurrencyStamp" type="hidden" />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div><label asp-for="FirstName" class="mb-1 block text-sm font-medium"></label><input asp-for="FirstName" class="input" /><span asp-validation-for="FirstName" class="field-validation-error"></span></div>
+                <div><label asp-for="LastName" class="mb-1 block text-sm font-medium"></label><input asp-for="LastName" class="input" /><span asp-validation-for="LastName" class="field-validation-error"></span></div>
+                <div class="sm:col-span-2"><label asp-for="Email" class="mb-1 block text-sm font-medium"></label><input asp-for="Email" class="input" autocomplete="email" /><span asp-validation-for="Email" class="field-validation-error"></span></div>
+            </div>
+
+            <fieldset class="mt-6 border-t border-gray-200 pt-5">
+                <legend class="font-display text-lg font-semibold">Assigned roles</legend>
+                <p class="mb-3 text-xs text-gray-500">Users can have more than one role. Assign at least one.</p>
+                <div class="grid gap-2 sm:grid-cols-3">
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        var isSelected = Model.SelectedRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase);
+                        <label class="flex min-h-12 items-center gap-3 border border-gray-200 px-3 py-2 text-sm">
+                            <input type="checkbox" name="SelectedRoles" value="@role.Name" checked="@(isSelected ? "checked" : null)" class="size-4 accent-primary-strong" />
+                            <span>@role.Name</span>
+                        </label>
+                    }
+                </div>
+            </fieldset>
+
+            <fieldset id="borrower-profile-fields" class="mt-6 border-t border-gray-200 pt-5">
+                <legend class="font-display text-lg font-semibold">Borrower profile</legend>
+                <p class="mb-3 text-xs text-gray-500">Required whenever the Borrower role is assigned. Eligibility remains a separate decision.</p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div><label asp-for="SchoolId" class="mb-1 block text-sm font-medium"></label><input asp-for="SchoolId" class="input" /><span asp-validation-for="SchoolId" class="field-validation-error"></span></div>
+                    <div><label asp-for="Department" class="mb-1 block text-sm font-medium"></label><input asp-for="Department" class="input" /><span asp-validation-for="Department" class="field-validation-error"></span></div>
+                    <div><label asp-for="ContactNumber" class="mb-1 block text-sm font-medium"></label><input asp-for="ContactNumber" class="input" /><span asp-validation-for="ContactNumber" class="field-validation-error"></span></div>
+                </div>
+            </fieldset>
+
+            <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-5">
+                <a asp-action="Index" class="border border-gray-200 px-4 py-2 text-sm">Cancel</a>
+                <button type="submit" class="btn-primary">Save changes</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="mt-5 flex flex-wrap items-center justify-between gap-4 border border-gray-200 bg-white p-5">
+        <div>
+            <h3 class="font-display text-lg font-semibold">@(Model.IsActive ? "Deactivate account" : "Reactivate account")</h3>
+            <p class="mt-1 max-w-xl text-xs leading-5 text-gray-500">@(Model.IsActive ? "This blocks future sign-ins while retaining the account and its borrowing history." : "This allows the account to sign in again. Existing history is unchanged.")</p>
+        </div>
+        <form asp-action="SetActive" method="post" onsubmit="return confirm('@(Model.IsActive ? "Deactivate" : "Reactivate") this account?');">
+            <input type="hidden" name="UserId" value="@Model.Id" />
+            <input type="hidden" name="ConcurrencyStamp" value="@Model.ConcurrencyStamp" />
+            <input type="hidden" name="IsActive" value="@(!Model.IsActive)" />
+            <button type="submit" class="border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary-strong">@(Model.IsActive ? "Deactivate" : "Reactivate")</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const roleBoxes = document.querySelectorAll('input[name="SelectedRoles"]');
+            const profile = document.getElementById("borrower-profile-fields");
+            const requiredFields = [document.getElementById("SchoolId"), document.getElementById("Department")];
+            const syncProfile = () => {
+                const borrower = Array.from(roleBoxes).some(box => box.checked && box.value === "Borrower");
+                profile.classList.toggle("hidden", !borrower);
+                for (const field of requiredFields) field.required = borrower;
+            };
+            roleBoxes.forEach(box => box.addEventListener("change", syncProfile));
+            syncProfile();
+        })();
+    </script>
+}

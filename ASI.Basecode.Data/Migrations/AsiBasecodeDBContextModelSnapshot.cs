@@ -17,10 +17,57 @@ namespace ASI.Basecode.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("ASI.Basecode.Data.Models.AdministrationAuditEvent", b =>
+                {
+                    b.Property<long>("AdministrationAuditEventId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AdministrationAuditEventId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("DetailsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("TargetRoleId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TargetUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("AdministrationAuditEventId");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("TargetRoleId");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("AdministrationAuditEvent", (string)null);
+                });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.ApplicationUser", b =>
                 {
@@ -107,7 +154,9 @@ namespace ASI.Basecode.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .IsUnique()
+                        .HasDatabaseName("EmailIndex")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
@@ -275,8 +324,9 @@ namespace ASI.Basecode.Data.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Available");
 
-                    b.Property<long>("LocationId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Model")
                         .HasMaxLength(150)
@@ -297,8 +347,6 @@ namespace ASI.Basecode.Data.Migrations
 
                     b.HasIndex("ItemCode")
                         .IsUnique();
-
-                    b.HasIndex("LocationId");
 
                     b.HasIndex("SerialNumber")
                         .IsUnique()
@@ -350,36 +398,6 @@ namespace ASI.Basecode.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_LateReturn_Dates", "[ReturnedAt] > [DueAt] AND [DaysLate] >= 0");
                         });
-                });
-
-            modelBuilder.Entity("ASI.Basecode.Data.Models.Location", b =>
-                {
-                    b.Property<long>("LocationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("LocationId"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("LocationName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("LocationId");
-
-                    b.HasIndex("LocationName")
-                        .IsUnique();
-
-                    b.ToTable("Location", (string)null);
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.Permission", b =>
@@ -586,6 +604,17 @@ namespace ASI.Basecode.Data.Migrations
                     b.ToTable("RolePermission", (string)null);
                 });
 
+            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("RolePermissionSeed", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -719,6 +748,25 @@ namespace ASI.Basecode.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ASI.Basecode.Data.Models.AdministrationAuditEvent", b =>
+                {
+                    b.HasOne("ASI.Basecode.Data.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("TargetRoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ASI.Basecode.Data.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("ASI.Basecode.Data.Models.BorrowerProfile", b =>
                 {
                     b.HasOne("ASI.Basecode.Data.Models.ApplicationUser", "User")
@@ -738,15 +786,7 @@ namespace ASI.Basecode.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ASI.Basecode.Data.Models.Location", "Location")
-                        .WithMany("EquipmentItems")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Category");
-
-                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.LateReturn", b =>
@@ -843,6 +883,15 @@ namespace ASI.Basecode.Data.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -912,11 +961,6 @@ namespace ASI.Basecode.Data.Migrations
             modelBuilder.Entity("ASI.Basecode.Data.Models.EquipmentItem", b =>
                 {
                     b.Navigation("Reservations");
-                });
-
-            modelBuilder.Entity("ASI.Basecode.Data.Models.Location", b =>
-                {
-                    b.Navigation("EquipmentItems");
                 });
 
             modelBuilder.Entity("ASI.Basecode.Data.Models.Permission", b =>

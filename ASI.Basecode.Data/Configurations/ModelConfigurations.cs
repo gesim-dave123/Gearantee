@@ -19,6 +19,56 @@ namespace ASI.Basecode.Data.Configurations
                 .HasColumnType("datetime2")
                 .HasDefaultValueSql("SYSUTCDATETIME()");
             builder.HasIndex(x => x.UserCode).IsUnique();
+            builder.HasIndex(x => x.NormalizedEmail)
+                .IsUnique()
+                .HasFilter("[NormalizedEmail] IS NOT NULL")
+                .HasDatabaseName("EmailIndex");
+        }
+    }
+
+    public class RolePermissionSeedConfiguration : IEntityTypeConfiguration<RolePermissionSeed>
+    {
+        public void Configure(EntityTypeBuilder<RolePermissionSeed> builder)
+        {
+            builder.ToTable("RolePermissionSeed");
+            builder.HasKey(x => x.RoleId);
+            builder.Property(x => x.RoleId).HasMaxLength(450);
+            builder.HasOne<Microsoft.AspNetCore.Identity.IdentityRole>()
+                .WithMany()
+                .HasForeignKey(x => x.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    public class AdministrationAuditEventConfiguration : IEntityTypeConfiguration<AdministrationAuditEvent>
+    {
+        public void Configure(EntityTypeBuilder<AdministrationAuditEvent> builder)
+        {
+            builder.ToTable("AdministrationAuditEvent");
+            builder.HasKey(x => x.AdministrationAuditEventId);
+            builder.Property(x => x.AdministrationAuditEventId).UseIdentityColumn();
+            builder.Property(x => x.ActorUserId).HasMaxLength(450).IsRequired();
+            builder.Property(x => x.TargetUserId).HasMaxLength(450);
+            builder.Property(x => x.TargetRoleId).HasMaxLength(450);
+            builder.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            builder.Property(x => x.DetailsJson).HasColumnType("nvarchar(max)");
+            builder.Property(x => x.OccurredAt)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+            builder.HasIndex(x => x.OccurredAt);
+            builder.HasIndex(x => x.TargetUserId);
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.ActorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.TargetUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            builder.HasOne<Microsoft.AspNetCore.Identity.IdentityRole>()
+                .WithMany()
+                .HasForeignKey(x => x.TargetRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 
@@ -108,20 +158,6 @@ namespace ASI.Basecode.Data.Configurations
         }
     }
 
-    public class LocationConfiguration : IEntityTypeConfiguration<Location>
-    {
-        public void Configure(EntityTypeBuilder<Location> builder)
-        {
-            builder.ToTable("Location");
-            builder.HasKey(x => x.LocationId);
-            builder.Property(x => x.LocationId).UseIdentityColumn();
-            builder.Property(x => x.LocationName).HasMaxLength(200).IsRequired();
-            builder.Property(x => x.Description).HasMaxLength(1000);
-            builder.Property(x => x.IsActive).HasDefaultValue(true);
-            builder.HasIndex(x => x.LocationName).IsUnique();
-        }
-    }
-
     public class EquipmentItemConfiguration : IEntityTypeConfiguration<EquipmentItem>
     {
         public void Configure(EntityTypeBuilder<EquipmentItem> builder)
@@ -131,6 +167,7 @@ namespace ASI.Basecode.Data.Configurations
             builder.Property(x => x.EquipmentId).UseIdentityColumn();
             builder.Property(x => x.ItemCode).HasMaxLength(100).IsRequired();
             builder.Property(x => x.ItemName).HasMaxLength(200).IsRequired();
+            builder.Property(x => x.Location).HasColumnType("varchar(200)").IsRequired();
             builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
             builder.Property(x => x.Brand).HasMaxLength(150);
             builder.Property(x => x.Model).HasMaxLength(150);
@@ -156,10 +193,6 @@ namespace ASI.Basecode.Data.Configurations
             builder.HasOne(x => x.Category)
                 .WithMany(x => x.EquipmentItems)
                 .HasForeignKey(x => x.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(x => x.Location)
-                .WithMany(x => x.EquipmentItems)
-                .HasForeignKey(x => x.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

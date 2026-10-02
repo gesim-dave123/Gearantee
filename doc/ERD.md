@@ -9,6 +9,7 @@ This is the simplified visual reference for the Version 1 Campus Equipment Borro
 - `BorrowerProfile` stores school identity, department, contact, and borrowing eligibility.
 - Each reservation contains exactly one equipment item.
 - A borrower requests multiple items by creating multiple reservations.
+- Each equipment item stores its own `VARCHAR(200)` location text; there is no location lookup table or foreign key.
 - SQL Server is the database engine; SSMS is an optional administration tool.
 
 ```mermaid
@@ -20,7 +21,6 @@ erDiagram
 
     APPLICATION_USER ||--o| BORROWER_PROFILE : has
     EQUIPMENT_CATEGORY ||--o{ EQUIPMENT_ITEM : classifies
-    LOCATION ||--o{ EQUIPMENT_ITEM : stores
 
     BORROWER_PROFILE ||--o{ RESERVATION : creates
     EQUIPMENT_ITEM ||--o{ RESERVATION : is_requested_in
@@ -77,16 +77,10 @@ erDiagram
         bit is_active
     }
 
-    LOCATION {
-        bigint location_id PK
-        nvarchar location_name UK
-        bit is_active
-    }
-
     EQUIPMENT_ITEM {
         bigint equipment_id PK
         bigint category_id FK
-        bigint location_id FK
+        varchar location
         nvarchar item_code UK
         nvarchar item_name
         nvarchar serial_number UK
@@ -142,7 +136,6 @@ erDiagram
 | Application User → Borrower Profile | 1:0..1 | Only borrowing accounts need a borrower profile. |
 | Role → Permission | M:N | `ROLE_PERMISSION` assigns capabilities to Identity roles. |
 | Category → Equipment Item | 1:M | Each item belongs to one category. |
-| Location → Equipment Item | 1:M | Each item has one current location. |
 | Borrower Profile → Reservation | 1:M | A borrower can submit many requests. |
 | Equipment Item → Reservation | 1:M | An item can appear in many historical reservations, but approved times cannot overlap. |
 | Reservation → Release Record | 1:0..1 | Only a fulfilled approved reservation is released. |
@@ -156,4 +149,5 @@ erDiagram
 - Reservation start must be earlier than reservation end.
 - Approval must recheck schedule overlap in a SQL Server transaction.
 - Optional serial numbers require a filtered unique index.
+- Equipment location is required free text on the item, with no `LOCATION` foreign key.
 - Historical transaction rows must not be cascade-deleted.

@@ -1,7 +1,4 @@
 @model LoginViewModel
-@section Styles {
-    <link rel="stylesheet" href="~/css/login.css" />
-}
 @{
     ViewBag.LoginView = true;
     ViewBag.LoginPage = true;
@@ -11,7 +8,7 @@
 <div class="login-page">
     <aside class="login-story" aria-label="Gearantee overview">
         <div class="login-story-mark" aria-hidden="true">
-            <img class="login-story-logo" src="~/img/LOGO 1.png" alt="" />
+            <img class="login-story-logo" src="~/img/gearantee-logo.png" alt="Gearantee — Campus equipment borrowing and reservation system" />
         </div>
         <div class="login-story-content">
             <div class="login-story-copy">
@@ -43,20 +40,20 @@
 
             <form id="login-form" asp-action="Login" asp-controller="Account" method="post">
                 <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
-                <div asp-validation-summary="ModelOnly" class="login-validation" role="alert"></div>
+                <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
 
                 <div class="login-field">
                     <label asp-for="UserId">Email or school ID</label>
-                    <input asp-for="UserId" class="login-input"
+                    <input asp-for="UserId" class="input"
                            autocomplete="username"
                            placeholder="mvillanueva@school.edu" />
-                    <span asp-validation-for="UserId" class="login-field-error"></span>
+                    <span asp-validation-for="UserId" class="field-validation-error"></span>
                 </div>
 
                 <div class="login-field">
                     <label asp-for="Password"></label>
                     <div class="login-password-wrap">
-                        <input asp-for="Password" type="password" class="login-input"
+                        <input asp-for="Password" type="password" class="input"
                                autocomplete="current-password"
                                placeholder="••••••••••" />
                         <button id="toggle-password" class="login-password-toggle" type="button"
@@ -64,7 +61,7 @@
                             Show
                         </button>
                     </div>
-                    <span asp-validation-for="Password" class="login-field-error"></span>
+                    <span asp-validation-for="Password" class="field-validation-error"></span>
                 </div>
 
                 <div class="login-options">
@@ -75,7 +72,7 @@
                     <a href="/Account/ForgotPassword">Forgot password?</a>
                 </div>
 
-                <button id="login-submit" class="login-submit" type="submit">Sign in</button>
+                <button id="login-submit" class="btn-primary w-full py-3 text-sm disabled:cursor-wait disabled:opacity-60" type="submit">Sign in</button>
             </form>
 
             <p class="login-register">

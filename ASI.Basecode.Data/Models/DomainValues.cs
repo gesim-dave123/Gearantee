@@ -38,5 +38,13 @@ namespace ASI.Basecode.Data.Models
             public const string Unavailable = "Unavailable";
             public const string Archived = "Archived";
         }
+
+        public static class ReturnConditions
+        {
+            public const string Good = "Good";
+            public const string Damaged = "Damaged";
+            public const string NeedsInspection = "NeedsInspection";
+            public const string UnderRepair = "UnderRepair";
+        }
     }
 }

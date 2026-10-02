@@ -54,6 +54,30 @@ namespace ASI.Basecode.WebApp.Authorization
                 string.IsNullOrWhiteSpace(user.DisplayName)
                     ? user.UserCode
                     : user.DisplayName));
+
+            var borrowerProfile = await _dbContext.BorrowerProfiles
+                .AsNoTracking()
+                .Where(profile => profile.UserId == user.Id)
+                .Select(profile => new
+                {
+                    profile.SchoolId,
+                    profile.Department
+                })
+                .FirstOrDefaultAsync();
+
+            if (borrowerProfile != null)
+            {
+                if (!string.IsNullOrWhiteSpace(borrowerProfile.SchoolId))
+                {
+                    identity.AddClaim(new Claim("school_id", borrowerProfile.SchoolId));
+                }
+
+                if (!string.IsNullOrWhiteSpace(borrowerProfile.Department))
+                {
+                    identity.AddClaim(new Claim("department", borrowerProfile.Department));
+                }
+            }
+
             return identity;
         }
     }

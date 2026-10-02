@@ -61,7 +61,7 @@ Production connection strings and Brevo credentials belong in protected IIS, Azu
 
 ## Database Setup
 
-The initial canonical migration is committed under `ASI.Basecode.Data/Migrations`. Apply it with this one-line command:
+The canonical schema and feature migrations are committed under `ASI.Basecode.Data/Migrations`. Run this command after the first database setup and whenever you pull a change that adds a migration; it applies all pending migrations:
 
 ```powershell
 dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj --startup-project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj --context AsiBasecodeDBContext
@@ -82,6 +82,8 @@ dotnet ef database update --project .\ASI.Basecode.Data\ASI.Basecode.Data.csproj
 
 Review generated migrations before applying them. Back up production SQL Server databases and test restoration before deployment.
 
+The user-administration migration adds audit and permission-seed tables, and makes normalized Identity email unique. It checks for existing duplicate email addresses before changing the index; if any are found, the migration stops without changing the schema, and those duplicates must be resolved first.
+
 The default non-secret development connection targets:
 
 ```text
@@ -100,7 +102,7 @@ dotnet run --no-build `
   -- --seed
 ```
 
-It always seeds the three roles, eight permissions, and documented role-permission assignments. It creates an administrator only when these user-secret values are present:
+It ensures the three roles and eight permissions exist. Default role grants are initialized once and subsequent seed runs preserve permission changes made through Users & Roles. An existing account configured as the bootstrap administrator is not silently re-promoted if its role was removed. The command creates the initial administrator only when these user-secret values are present:
 
 ```powershell
 dotnet user-secrets set "SeedAdmin:Email" "admin@example.edu" --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
@@ -112,9 +114,34 @@ Do not place the administrator password in `appsettings.json`.
 
 ## Tailwind CSS
 
-The frontend migration must configure Tailwind to scan MVC Razor Views and JavaScript, compile its source stylesheet to `ASI.Basecode.WebApp/wwwroot/css/app.css`, watch files during development, and generate a minified production build.
+Tailwind scans MVC Razor Views and JavaScript. The source stylesheet is `ASI.Basecode.WebApp/wwwroot/css/tailwind.src.css`; the compiled, minified `wwwroot/css/app.css` is checked in so the app can run without Node.js.
 
-Bootstrap references and Bootstrap-only view classes should be removed only after the corresponding views have been converted.
+From `ASI.Basecode.WebApp`, install the locked dependencies once, then run the watcher in a separate terminal while styling:
+
+```powershell
+npm ci
+npm run css:dev
+```
+
+Before submitting CSS or Razor class changes, create the minified production file:
+
+```powershell
+npm run css:build
+```
+
+The application layout loads the generated stylesheet. Bootstrap and the old template CSS have been removed; use Tailwind utility classes and the shared `.input` / `.btn-primary` component classes.
+
+## Preview the dashboards with sample data
+
+The development-only `--seed-demo` command creates idempotent dashboard sample rows and one account (`DEMO-001`) that has Borrower, Custodian, and Administrator roles. Set its password as a local secret first:
+
+```powershell
+dotnet user-secrets set "SeedDemo:Password" "choose-a-strong-local-password" --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj -- --seed-demo
+```
+
+Sign in with user code `DEMO-001` and the password you selected. Use the development-only role switcher to preview each dashboard. Do not use demo seed data in production.
 
 ## Run the Application
 
@@ -125,7 +152,7 @@ dotnet test .\ASI.Basecode.sln
 dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
 ```
 
-Run the Tailwind development watcher in a separate terminal after its npm scripts have been added.
+For active UI work, run `npm ci` once and `npm run css:dev` in a separate terminal from `ASI.Basecode.WebApp`. The checked-in `app.css` is already available when running the site without Node.js.
 
 ## Current Implementation Status
 
@@ -139,8 +166,12 @@ Implemented:
 - Idempotent role/permission seeding with optional secure administrator creation
 - Database health endpoint at `/health/database`
 - Password-reset OTP flow with Brevo email delivery
+- Tailwind CSS build, shared responsive shell, and Tailwind-styled authentication pages
+- Administrator user management with single and atomic bulk CSV account creation, role assignment, permission matrix, and account activation controls (see [CSV import instructions](doc/USER_CSV_IMPORT.md))
+- SQL-backed borrower, custodian, and administrator dashboard views
+- Development-only role switcher and demo dashboard data seeder
 
-Still planned:
+Still in progress:
 
-- Tailwind CSS migration
-- Role-specific dashboards and the equipment/reservation workflows
+- Dashboard polish and acceptance against the approved screen-size and role test matrix
+- Equipment, reservation, approval/release, return, calendar, and reporting workflows

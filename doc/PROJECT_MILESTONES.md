@@ -14,7 +14,7 @@ Update this file **in the same PR** that finishes or starts a feature.
 2. Set **Status** to one of: `Not Started` · `In Progress` · `In Review` · `Done` · `Blocked`.
    - `In Progress` → fill **Actual Start**.
    - `In Review` → add the PR link (for example, `#12`).
-   - `Done` → fill **Actual End** (the merge date) and keep the PR link.
+   - `Done` → fill **Actual End** with the owner-confirmed completion date (use the merge date when no earlier completion date is confirmed) and keep the PR link.
 3. Tick the related `[ ]` → `[x]` item(s) in the matching Milestone section only when *all* WBS rows for that item are `Done`.
 4. Recalculate the Progress summary counts.
 5. Add one line to the Change log.
@@ -30,10 +30,10 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 
 | Status | Count |
 | --- | --- |
-| Done | 2 |
-| In Review | 4 |
+| Done | 5 |
+| In Review | 9 |
 | In Progress | 0 |
-| Not Started | 38 |
+| Not Started | 30 |
 | Blocked | 0 |
 
 ### By member
@@ -44,7 +44,7 @@ Shared rows count for each assigned member.
 | --- | --- | --- |
 | Member 1 — Gesim | 6 (1.00, 20–23, 56) | 1 |
 | Member 2 — Bansag | 13 (1.00, 9–12, 25–28, 52–55) | 1 |
-| Member 3 — Laroco | 12 (1.00, 3, 5–7, 14–18, 49–50) | 2 |
+| Member 3 — Laroco | 12 (1.00, 3, 5–7, 14–18, 49–50) | 5 |
 | Member 4 — Cancencia | 7 (30–32, 39–42) | 0 |
 | Member 5 — Cataraja | 9 (34–37, 44–47, 56) | 0 |
 
@@ -56,20 +56,20 @@ Shared rows count for each assigned member.
 | **2.00** | **Authentication: User Login** | | | | | | | | | |
 | 3.00 | User Login Page | Laroco | 9/24/2026 | 9/25/2026 | 1 | 9/25/2026 | 9/25/2026 | Done | #6 | M2 |
 | **4.00** | **Authentication: Role-Based Dashboard** | | | | | | | | | |
-| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
-| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | | | Not Started | | M2 |
+| 5.00 | View Borrower's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
+| 6.00 | View Custodian's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
+| 7.00 | View Administrator's Dashboard Page | Laroco | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | 9/28/2026 | Done | #21 | M2 |
 | **8.00** | **Authentication: Password Reset Request** | | | | | | | | | |
 | 9.00 | Request Password Reset Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 10.00 | Receive OTP in Email | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 11.00 | OTP Verification Page | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | 12.00 | Set New Password | Bansag | 9/25/2026 | 9/28/2026 | 3 | 9/25/2026 | | In Review | #19 | M2 |
 | **13.00** | **Administration: User and Role Management** | | | | | | | | | |
-| 14.00 | View User Accounts Page | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 15.00 | Create Accounts | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 16.00 | Assign & Update Roles | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 17.00 | Configure Role Access Permissions | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 18.00 | Deactivate Users | Laroco | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
+| 14.00 | View User Accounts Page | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
+| 15.00 | Create Accounts | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
+| 16.00 | Assign & Update Roles | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
+| 17.00 | Configure Role Access Permissions | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
+| 18.00 | Deactivate Users | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
 | **19.00** | **Master Data: Equipment Category Management** | | | | | | | | | |
 | 20.00 | Create Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
 | 21.00 | Read Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
@@ -139,8 +139,8 @@ Shared rows count for each assigned member.
 - [ ] Optionally use SQL Server Management Studio (SSMS) to administer and inspect SQL Server; SSMS is not the database engine.
 - [x] Use Entity Framework Core with `Microsoft.EntityFrameworkCore.SqlServer`.
 - [x] Add the initial entities and create/apply migrations based on the canonical ERD.
-- [ ] Configure Tailwind CSS, its Razor content scanning, development watch command, and minified production build.
-- [ ] Establish the shared layout, navigation, Tailwind styling, error pages, and basic logging.
+- [x] Configure Tailwind CSS, its Razor content scanning, development watch command, and minified production build.
+- [x] Establish the shared layout, navigation, Tailwind styling, error pages, and basic logging.
 - [ ] Create development/production configuration separation.
 - [x] Add GitHub Actions CI (build, EF migration check, vulnerable-package check, and CodeQL) and protect `main` (PR #6).
 
@@ -165,7 +165,7 @@ Shared rows count for each assigned member.
 - [x] Configure ASP.NET Core Identity with SQL Server.
 - [x] Seed the three roles and documented role-permission assignments.
 - [x] Build Identity-backed registration, login, and logout pages.
-- [ ] Build role-based dashboards and navigation.
+- [x] Build role-based dashboards and navigation.
 - [ ] Add account activation/deactivation behavior.
 - [ ] Implement Forgot Password using Identity reset tokens, Brevo OTP delivery, and verified sender secrets.
 - [x] Apply password policy, sign-in lockout, HTTPS redirect, and global authorization rules; apply per-page permission rules as each feature lands (PR #6).
@@ -338,6 +338,9 @@ Shared rows count for each assigned member.
 | 9/25/2026 | Patched vulnerable build dependencies | Laroco | #6 |
 | 9/24/2026 | How to run the system guide (`doc/Instruction_On_How_To_Run.md`) | Bansag | #1, #5 |
 | 9/28/2026 | Enabled CI checks for all branches | Laroco | — |
+| 9/29/2026 | Removed Bootstrap/template styling and added Tailwind build assets | Laroco | — |
+| 9/30/2026 | Addressed dashboard PR review findings and added regression tests | Laroco | #21 |
+| 10/1/2026 | Replaced the equipment location lookup with required `VARCHAR(200)` item text and a data-copy migration | Laroco | — |
 
 ## Open questions
 
@@ -366,3 +369,10 @@ The first version is complete when borrowers can securely reserve one available 
 | --- | --- | --- |
 | 9/25/2026 | Added WBS Feature Tracker; marked 1.00 and 3.00 Done | Laroco |
 | 9/28/2026 | Moved WBS 9.00–12.00 to In Review for PR #19 and aligned password-reset documentation with the OTP/Brevo implementation | Bansag |
+| 9/29/2026 | Added SQL-backed dashboards, shared responsive shell, Tailwind build, and demo seeding for WBS 5.00–7.00 | Laroco |
+| 9/30/2026 | Addressed PR #21 review findings TEST-01, OPS-01, UX-01, and P3-01–P3-05 | Laroco |
+| 10/1/2026 | Removed the Location entity and updated the schema, dashboards, demo seed, and ERD for item location text | Laroco |
+| 10/1/2026 | Marked WBS 5.00–7.00 Done using owner-confirmed 9/25 start and 9/28 completion dates; PR #21 merged on 10/1 | Laroco |
+| 10/1/2026 | Started WBS 14.00–18.00 implementation for user accounts, role assignment, permissions, and account activation management | Laroco |
+| 10/1/2026 | Implemented the user-administration screens, Identity workflows, permission controls, SQL Server safeguards, documentation, and regression tests; awaiting PR review before advancing WBS status | Laroco |
+| 10/2/2026 | Moved WBS 14.00–18.00 to In Review for PR #22; addressed REQ-01 with atomic CSV account creation, UX/AUDIT-01 with trusted edit redisplay and no-op activation handling, and ROLE-EDGE-01 with inactive-admin demotion; added regression tests and import instructions | Laroco |

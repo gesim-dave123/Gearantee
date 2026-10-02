@@ -1,5 +1,7 @@
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Services.Interfaces;
+using ASI.Basecode.Services.Services;
 using ASI.Basecode.WebApp.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -16,6 +18,7 @@ namespace ASI.Basecode.WebApp
         {
             _services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             _services.TryAddSingleton<IActionContextAccessor, ActionContextAccessor>();
+            _services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             _services.AddScoped<IUnitOfWork, UnitOfWork>();
             _services.Configure<BrevoOptions>(
                 Configuration.GetSection(BrevoOptions.SectionName));
@@ -30,6 +33,8 @@ namespace ASI.Basecode.WebApp
                 });
             _services.AddScoped<IPasswordResetOtpStore, IdentityPasswordResetOtpStore>();
             _services.AddScoped<PasswordResetOtpService>();
+            _services.AddScoped<IDashboardService, DashboardService>();
+            _services.AddScoped<IUserAdministrationService, UserAdministrationService>();
         }
     }
 }

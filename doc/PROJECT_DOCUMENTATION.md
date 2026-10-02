@@ -104,6 +104,10 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Administrators create, edit, activate/deactivate, and assign roles to user accounts.
 - Roles control which dashboard, pages, actions, and data each user can access.
 - Deactivating an account prevents login while retaining transaction history for audit purposes.
+- The Users & Roles page provides searchable, filterable, paginated accounts and a role-to-permission matrix.
+- New accounts use ASP.NET Core Identity; borrower-profile fields are stored separately and borrower eligibility starts disabled.
+- Current database authority is checked on administrative writes; self-deactivation, self-demotion from Administrator, and removal of the last active Administrator are blocked.
+- Account, role, permission, and activation changes are recorded with actor and timestamp; secrets are excluded from the audit record.
 
 ## 4. Core Workflow
 
@@ -142,9 +146,10 @@ The initial release is intentionally focused on the core borrowing workflow and 
 | Borrower Profile | Student/faculty borrowing record | Borrower profile ID, Identity user ID, school ID, department, contact details, eligibility |
 | Identity Role / User Role | Role assignment | Identity role ID/name and user-role association |
 | Permission / Role Permission | Fine-grained authorization | Permission name and role-permission association |
+| Administration Audit Event | Administrative accountability | Actor, target account/role, action, safe before/after details, UTC timestamp |
+| Role Permission Seed | Preserve configured access | Identity role whose initial permissions have been provisioned |
 | Equipment Category | Equipment grouping | Category ID, name, active status |
-| Location | Controlled storage/facility location | Location ID, name, active status |
-| Equipment Item | Individual trackable item | Item ID/code, category, location, name/model, serial number, image URL/path, condition, operational status |
+| Equipment Item | Individual trackable item | Item ID/code, category, free-text `VARCHAR(200)` location, name/model, serial number, image URL/path, condition, operational status |
 | Reservation | Requested schedule for exactly one item | Reservation ID, borrower profile, equipment item, purpose, requested release/return dates, status, reviewer |
 | Release Record | Confirmation of handover | Release ID, reservation, custodian, actual release time, notes |
 | Return Record | Confirmation of return and inspection | Return ID, release/reservation, custodian, actual return time, condition, notes |

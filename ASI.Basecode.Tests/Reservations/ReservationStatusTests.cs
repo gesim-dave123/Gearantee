@@ -203,13 +203,14 @@ namespace ASI.Basecode.Tests.Reservations
             var user = DashboardSeed.User(db, "BRW-1");
             var profile = DashboardSeed.Profile(db, user);
             var item = DashboardSeed.Item(db, "ITEM-1");
-            for (var i = 0; i < ReservationService.PageSize + 1; i++)
+            for (var i = 0; i < 11; i++)
             {
                 DashboardSeed.Reservation(db, profile, item, Now.AddDays(i + 1), Now.AddDays(i + 2), DomainValues.ReservationStatuses.Cancelled);
             }
 
             var model = ReservationsFor(db, Now).GetMyReservations(user.Id, null, 99);
 
+            Assert.Equal(10, ReservationsFor(db, Now).GetMyReservations(user.Id, null, 1).Items.Count);
             Assert.Equal(2, model.TotalPages);
             Assert.Equal(2, model.Page);
             Assert.Single(model.Items);

@@ -97,6 +97,10 @@
             right: "timeGridWeek,timeGridDay"
         },
         buttonText: { today: "Today", timeGridWeek: "Week", timeGridDay: "Day" },
+        // UI appearance only: FullCalendar 7 uses eventClass/eventInnerClass.
+        // Scheduling, event data and selection handlers below remain unchanged.
+        eventClass: info => `availability-event availability-event-${String(info.event.extendedProps.status || "reserved").toLowerCase()}`,
+        eventInnerClass: () => "availability-event-inner",
         height: "auto",
         nowIndicator: true,
         allDaySlot: false,

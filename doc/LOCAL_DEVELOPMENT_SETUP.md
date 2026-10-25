@@ -93,13 +93,26 @@ Use a development password with at least eight characters, an uppercase letter, 
 
 Do not add passwords or other secrets to Git. User Secrets remain on the developer's computer.
 
-Seed the roles, permissions, and optional administrator account:
+For a separate Custodian login, also configure these User Secrets. Replace the password placeholder with your local development password:
+
+```powershell
+dotnet user-secrets set "SeedCustodian:Email" "custodian@example.com" `
+  --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+dotnet user-secrets set "SeedCustodian:UserCode" "CUST-001" `
+  --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+dotnet user-secrets set "SeedCustodian:Password" "YOUR_DEVELOPMENT_PASSWORD" `
+  --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj
+```
+
+Seed the roles, permissions, and configured administrator and Custodian accounts:
 
 ```powershell
 dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj -- --seed
 ```
 
 The seed command is safe to run again. It will not create duplicate roles or permissions.
+
+The Custodian account receives only the Custodian role. All three `SeedCustodian` values are required; without them, its creation is skipped. Reseeding leaves existing accounts, passwords, activation and role changes intact. `--seed-demo` also runs this account seed before adding its existing multi-role demo account and sample data. `UI-BORROWER` belongs to the separate UI preview fixture and is not created by either seed command.
 
 ## 7. Run the website
 

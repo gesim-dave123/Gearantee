@@ -15,6 +15,37 @@ namespace ASI.Basecode.Tests.Returns
     {
         private static readonly DateTime Now = Utc(2026, 10, 17, 4);
 
+        [Theory]
+        [InlineData(ReturnRecordService.OnLoanTab)]
+        [InlineData(ReturnRecordService.OverdueTab)]
+        [InlineData(ReturnRecordService.ReturnedTab)]
+        [InlineData(ReturnRecordService.LateTab)]
+        public void Each_return_tab_limits_pages_to_ten_records(string tab)
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var custodian = Staff(db, "CUS-PAGES", DomainValues.Roles.Custodian);
+            var service = ReturnsFor(db, Now);
+            for (var index = 0; index < 11; index++)
+            {
+                var release = Loan(db, $"PAGE-{index:00}", Now.AddDays(-2), Now.AddHours(-1), Now.AddDays(-2));
+                if (tab == ReturnRecordService.ReturnedTab || tab == ReturnRecordService.LateTab)
+                {
+                    var result = service.AddReturnRecord(
+                        Form(release, Now, DomainValues.ReturnConditions.Good, DomainValues.EquipmentStatuses.Available), custodian.Id);
+                    Assert.True(result.Succeeded, result.Message);
+                }
+            }
+            var first = service.GetReturnRecords(tab, 1);
+            var last = service.GetReturnRecords(tab, 99);
+            Assert.Equal(11, first.TotalCount);
+            Assert.Equal(2, first.TotalPages);
+            Assert.Equal(10, first.Items.Count);
+            Assert.Equal(2, last.Page);
+            Assert.Single(last.Items);
+            Assert.Empty(first.Items.Select(item => item.ReservationCode).Intersect(last.Items.Select(item => item.ReservationCode)));
+        }
+
         private static ReturnRecordViewModel Form(ReleaseRecord release, DateTime returnedUtc, string condition, string status, string notes = null) => new()
         {
             ReleaseRecordId = release.ReleaseRecordId,

@@ -1,6 +1,6 @@
 @model ASI.Basecode.WebApp.Models.ConfirmDialogModel
 <dialog id="@Model.Id" aria-labelledby="@(Model.Id)-title" aria-describedby="@(Model.Id)-message"
-        class="w-[min(28rem,calc(100%-2rem))] border border-gray-200 bg-white p-0 text-ink shadow-xl backdrop:bg-ink/50">
+        class="confirm-dialog w-[min(28rem,calc(100%-2rem))] border border-gray-200 bg-white p-0 text-ink shadow-xl backdrop:bg-ink/50">
     <div class="border-l-4 border-ink p-5 sm:p-6">
         <h2 id="@(Model.Id)-title" class="font-display text-xl font-semibold text-ink">@Model.Title</h2>
         <p id="@(Model.Id)-message" class="mt-2 text-sm leading-6 text-gray-700">@Model.Message</p>

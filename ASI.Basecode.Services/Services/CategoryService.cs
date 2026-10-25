@@ -1,3 +1,4 @@
+using ASI.Basecode.Services.Utilities;
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Services.Interfaces;
@@ -13,7 +14,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class CategoryService : ServiceBase, ICategoryService
     {
-        private const int PageSize = 10;
+        private const int PageSize = PaginationDefaults.PageSize;
         private readonly AsiBasecodeDBContext _db;
 
         public CategoryService(

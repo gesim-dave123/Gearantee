@@ -78,19 +78,9 @@
     </table>
 </div>
 
-@if (Model.TotalPages > 1)
-{
-    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-700">
-        <span>Page @Model.Page of @Model.TotalPages</span>
-        <div class="flex gap-2">
-            @if (Model.Page > 1)
-            {
-                <a asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page - 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Previous</a>
-            }
-            @if (Model.Page < Model.TotalPages)
-            {
-                <a asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page + 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Next</a>
-            }
-        </div>
-    </div>
-}
+<partial name="Components/_Pagination" model="@(new PaginationViewModel
+        {
+            Page = Model.Page, TotalPages = Model.TotalPages, TotalCount = Model.TotalCount,
+            Label = "Borrower profile pages",
+            Routes = { ["search"] = Model.Search }
+        })" />

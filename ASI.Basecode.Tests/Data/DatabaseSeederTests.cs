@@ -69,6 +69,93 @@ namespace ASI.Basecode.Tests.Data
         }
 
         [Theory]
+        [InlineData(null, "Custodian!123456", "CUST-001")]
+        [InlineData("custodian@test.local", "   ", "CUST-001")]
+        [InlineData("custodian@test.local", "Custodian!123456", null)]
+        public async Task SeedAsync_IncompleteCustodianConfiguration_CreatesNoAccount(
+            string email, string password, string userCode)
+        {
+            using var provider = CreateProvider();
+            await DatabaseSeeder.SeedAsync(provider, CreateConfiguration(new Dictionary<string, string>
+            {
+                ["SeedCustodian:Email"] = email,
+                ["SeedCustodian:Password"] = password,
+                ["SeedCustodian:UserCode"] = userCode
+            }));
+            using var scope = provider.CreateScope();
+            Assert.Empty(await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>().Users.ToListAsync());
+        }
+
+        [Fact]
+        public async Task SeedAsync_CustodianHasOnlyCustodianRole_AndReseedingPreservesAccountChanges()
+        {
+            using var provider = CreateProvider();
+            var settings = new Dictionary<string, string>
+            {
+                ["SeedCustodian:Email"] = "custodian@test.local",
+                ["SeedCustodian:Password"] = "Custodian!123456",
+                ["SeedCustodian:UserCode"] = "CUST-001"
+            };
+            await DatabaseSeeder.SeedAsync(provider, CreateConfiguration(settings));
+            await DatabaseSeeder.SeedAsync(provider, CreateConfiguration(settings));
+            using (var scope = provider.CreateScope())
+            {
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var user = Assert.Single(await users.Users.ToListAsync());
+                Assert.Equal("CUST-001", user.UserCode);
+                Assert.True(user.IsActive);
+                Assert.True(user.EmailConfirmed);
+                Assert.Equal(DomainValues.Roles.Custodian, Assert.Single(await users.GetRolesAsync(user)));
+                Assert.True(await users.CheckPasswordAsync(user, "Custodian!123456"));
+                Assert.True((await users.RemoveFromRoleAsync(user, DomainValues.Roles.Custodian)).Succeeded);
+                user.IsActive = false;
+                Assert.True((await users.UpdateAsync(user)).Succeeded);
+            }
+            settings["SeedCustodian:Password"] = "Changed!123456";
+            await DatabaseSeeder.SeedAsync(provider, CreateConfiguration(settings));
+            using (var scope = provider.CreateScope())
+            {
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var user = Assert.Single(await users.Users.ToListAsync());
+                Assert.False(user.IsActive);
+                Assert.Empty(await users.GetRolesAsync(user));
+                Assert.True(await users.CheckPasswordAsync(user, "Custodian!123456"));
+                Assert.False(await users.CheckPasswordAsync(user, "Changed!123456"));
+            }
+        }
+
+        [Theory]
+        [InlineData("custodian@test.local", "EXISTING-001")]
+        [InlineData("existing@test.local", "CUST-001")]
+        public async Task SeedAsync_CustodianConfigurationDoesNotPromoteExistingAccount(string email, string code)
+        {
+            using var provider = CreateProvider();
+            using (var scope = provider.CreateScope())
+            {
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                Assert.True((await users.CreateAsync(new ApplicationUser
+                {
+                    UserName = code, UserCode = code, Email = email,
+                    FirstName = "Existing", LastName = "User", IsActive = true,
+                    CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+                }, "Original!123456")).Succeeded);
+            }
+            await DatabaseSeeder.SeedAsync(provider, CreateConfiguration(new Dictionary<string, string>
+            {
+                ["SeedCustodian:Email"] = "custodian@test.local",
+                ["SeedCustodian:Password"] = "Custodian!123456",
+                ["SeedCustodian:UserCode"] = "CUST-001"
+            }));
+            using (var scope = provider.CreateScope())
+            {
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var user = Assert.Single(await users.Users.ToListAsync());
+                Assert.Empty(await users.GetRolesAsync(user));
+                Assert.True(await users.CheckPasswordAsync(user, "Original!123456"));
+            }
+        }
+
+        [Theory]
         [InlineData("admin@test.local", null, "ADM-001")]
         [InlineData("admin@test.local", "", "ADM-001")]
         [InlineData("admin@test.local", "Admin!123456", null)]

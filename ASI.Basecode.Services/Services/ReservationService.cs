@@ -15,7 +15,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class ReservationService : IReservationService
     {
-        public const int PageSize = 20;
+        public const int PageSize = PaginationDefaults.PageSize;
         private const int PurposeMaxLength = 1000;
         private const int ReasonMaxLength = 1000;
         private const int NotesMaxLength = 1000;

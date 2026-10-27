@@ -1,8 +1,10 @@
-# UI migration — phases 0–3
+# UI migration — phases 0–6
+
+Continuation authorized October 25, 2026 and implemented October 26, 2026 on the same branch and checkout. Phases 4–5 and the phase 6 UI consistency checks are complete. A pre-existing CSV export failure was initially reported separately, then fixed under the user's subsequent explicit authorization on October 26. The only additional controller change is asynchronous CSV writer disposal; services, Identity, permission gates, database schema, form/script contracts, calendar engine and 10-record pagination are preserved. The separate local login-copy edit is preserved. On October 27, the user authorized reverting the separate relaxed lockout settings to the original production policy; see the follow-up below.
 
 Date: October 24, 2026. Branch: `feat/ui-design-migration`. Baseline: `6803c83d6a2aea89e684ca991fa67868fc593d59` (staging).
 
-Implement the approved shared foundation, authentication and Borrower UI, then stop. Custodian and Admin page migrations and final whole-system acceptance (phases 4–6) require the user's next instruction. Shared components will affect their surrounding shell, but their workflow views are outside this batch.
+The original batch implemented phases 0–3 (shared foundation, authentication and Borrower UI). The user subsequently authorized Custodian/Admin migration and final whole-system acceptance (phases 4–6); progress and verification for this continuation are recorded below.
 
 ## Design authority
 
@@ -37,11 +39,11 @@ The baseline Release build/test run passed: **348 passed, 17 SQL Server opt-in t
 
 ## Verification and handoff
 
-For this batch: build production frontend assets, build/test .NET, compare functional view contracts to baseline, and exercise the real pages at desktop/tablet/mobile sizes with a disposable local database. Check validation, role navigation, dropdowns, drawer keyboard behavior, catalog filters, reservation submission/details/cancellation, calendar events and denied access. Record actual results below; do not imply phases 4–6 are complete.
+The original phase 0–3 batch built production frontend assets, built/tested .NET, compared functional view contracts to baseline, and exercised the real pages at desktop/tablet/mobile sizes with a disposable local database. Its results below are historical; the October 26 continuation has its own verification record at the end of this document.
 
 ### Implementation results
 
-Phases **0–3 are implemented**. Phases **4–6 have not been started** and await the user's instruction. Shared styling naturally appears around all roles; the Custodian/Admin workflow views have not been migrated.
+Phases **0–3 were implemented in the original batch**. Custodian/Admin workflow views were outside that batch and are now covered by the authorized continuation recorded below.
 
 - Added reusable rounded surfaces, controls, badges, summary cards, table/pager styles, authentication panels, decorative category equipment placeholders, and responsive shell styling using the existing palette. Actual equipment photos still take precedence over placeholders.
 - Migrated the authentication layouts without changing their forms or scripts. Replaced the old decorative hard-coded 248/5/3 access-page statistics with the approved equipment illustration; live dashboard/model counts remain untouched.
@@ -73,7 +75,7 @@ Browser checks used **only** the separate `Gearantee_UI_Migration_6803c83` Local
 - The 17 opt-in SQL Server concurrency tests were not enabled; browser interactions did use a real isolated SQL Server database. Services, controllers and migrations are unchanged.
 - Live email delivery and a successful emailed-OTP/password-change journey were not exercised. Existing OTP service tests passed; the UI retains the exact recovery fields, hidden values, actions and validation targets.
 - The catalog sample fits on one page. Pager contracts are unchanged and covered by the contract comparison; a multi-page catalog was not manually exercised.
-- Full-system acceptance and detailed Custodian/Admin workflow migration remain phases 4–6. Existing Google Sheet/WBS feature dates and completion statuses are unchanged because this is Additional work.
+- At that handoff, full-system acceptance and detailed Custodian/Admin workflow migration remained phases 4–6. Existing Google Sheet/WBS feature dates and completion statuses are unchanged because this is Additional work.
 
 ### Sidebar follow-up — October 24, 2026
 
@@ -99,8 +101,63 @@ The contract checker now supports `--staged`: it verifies unchanged form/hidden-
 
 Handoff validation passed: full-solution Release build/test (368 passed, 17 SQL Server opt-in tests skipped), 22 view and nine pager contracts from the staged index, JavaScript syntax, production frontend asset build and generated-asset consistency, EF pending-model check (no changes), and NuGet vulnerability audit (none found from the configured sources). The Release check compiled the baseline authentication configuration through the validation targets; the working file remained unchanged. Remote CI status is separate from these local results.
 
-### Continue later
+### Original checkout and header follow-up
 
 Header follow-up: removed the disabled catalog-search placeholder from the shared topbar at the user's request. Verified the Borrower, Custodian and Administrator dashboards each render without a header search field. Working catalog filters and the Users page's account-search form remain unchanged.
 
-Use `feat/ui-design-migration` directly in the original repository checkout. At the user's request, the UI changes were relocated there and the separate worktree was retired. Earlier uncommitted design files and PR review reports remain preserved locally, together with their separate tracker notes. A recovery ZIP is stored under the ignored `artifacts` directory. The scoped implementation is included in this handoff; unrelated design/review work remains local. Wait for the user before migrating the Custodian pages (phase 4), Admin pages (phase 5), or performing final whole-system acceptance (phase 6).
+Use `feat/ui-design-migration` directly in the original repository checkout. At the user's request, the UI changes were relocated there and the separate worktree was retired. Earlier uncommitted design files and PR review reports remain preserved locally, together with their separate tracker notes. A recovery ZIP is stored under the ignored `artifacts` directory. The user subsequently authorized phases 4–6; no additional checkout or worktree was created.
+
+## Phase 4–6 continuation — October 26, 2026
+
+Baseline: `8ee9b78f29a5dbc92bd21c38fb5ca921b0eabad7`. Implemented in the original checkout on `feat/ui-design-migration`. The user requested commit/push handoff on October 27; no PR creation was requested.
+
+| Phase | Implemented presentation | Preserved behavior |
+| --- | --- | --- |
+| 4 — Custodian | Modular dashboard, review queue and status tabs, approval/rejection/release details, return desk and inspection/history details, shared reporting/calendar styling | Existing approval/rejection/release POSTs and permission gates, required rejection reason, inspection fields, backdate note, damaged-item status restrictions, late-return information and all existing script handlers |
+| 5 — Admin | Dashboard/category inventory bars, equipment/category lists and forms, category dialogs, borrower profiles/eligibility, users/roles/permission matrix, CSV import and history filters | Model data, concurrency stamps, item edit locks, activation/eligibility actions, role/permission restrictions, upload format, validation, filtering and 10-record pagination |
+| 6 — UI consistency | Shared palette, rounded cards, responsive forms/tables, long-content wrapping, keyboard focus, phone drawer and inventory dialog focus containment | Existing routes, fields, data hooks and inline scripts; no production controller/service/model/schema changes |
+
+Changed 21 workflow views, source/compiled CSS, and added a presentation-only category-dialog accessibility script. Added the missing review-page titles and corrected the account form's existing label association with `initial-role`. No simulated notification feature or new workflow was introduced. Existing dashboard actions marked **Soon** remain unavailable, with operational workflows accessible through the existing navigation.
+
+### Continuation verification
+
+| Check | Observed result |
+| --- | --- |
+| Release regression suite excluding the separately reproduced CSV diagnostic | **370 passed, 18 skipped, 0 failed**. Skips: 17 opt-in SQL Server tests and one opt-in interactive preview |
+| New MVC/Identity acceptance | Real production controllers/services and Razor views, disposable SQLite database, actual cookies/CSRF. All 41 role-page requests render; Borrower/Custodian requests to user administration are denied. No-match lists and invalid category/user/profile/return submissions retain validation and form context |
+| CSV diagnostic before the authorized repair | **1 failed**, reproducing the pre-existing controller disposal error described below. This historical filtered regression result did not establish that export worked; see the subsequent repair verification |
+| View/source contracts | `check-ui-continuation.mjs --local-baseline artifacts/ui-phase4-baseline.json` passed for all **51 views**. Fields/routes/model references/guards/original scripts preserved; the exact label-association repair and single accessibility script are the explicit presentation exceptions. Two pre-existing local authentication/login files match their pre-work hashes |
+| Assets and syntax | `npm run assets:build`, JavaScript syntax and `git diff --check` passed. Rebuilt calendar vendor assets match HEAD apart from normalized Windows line endings |
+| Desktop browser | 1440×1000 Custodian/Admin dashboards, long equipment name wrapping, inventory/category tabs and category create dialog |
+| Tablet/phone browser | 768×1024 return inspection and calendar; 390×844 dashboard, review detail, return form and account form. Tables scroll within their containers; no page-level horizontal overflow observed |
+| Keyboard and states | Category dialog focuses its first field, Tab/Shift+Tab wrap, Escape closes and restores its opener/scroll state. At 844×390 the drawer wraps keyboard focus and Escape restores the menu button. Selecting Custodian hides Borrower account fields and removes their required flags. Damaged return condition disables Available and selects Under Maintenance. Calendar Week/Day switching and seeded events render |
+
+Browser checks used the opt-in `UiAcceptanceSite` on port 5192 with **disposable SQLite test records**, real MVC/Identity and existing services. They did not use the configured application SQL database or send email. The preview and gallery servers were stopped after checks; viewport overrides and temporary tabs were cleaned up. Screenshots are saved in ignored `artifacts/ui-custodian-desktop.png`, `artifacts/ui-admin-desktop.png` and `artifacts/ui-admin-mobile-form.png`.
+
+The fixture is deliberately test-only: `GEARANTEE_UI_PREVIEW=1` enables its interactive test, and `artifacts/ui-acceptance-stop` stops it early. Its sample credentials are not application seed credentials. Ordinary test runs skip the interactive host. The new rendering/validation tests exercise HTTP contracts; successful production SQL transactions, live email and the opt-in SQL concurrency scenarios were not re-exercised in this continuation. Existing transaction/service tests passed in the regression run.
+
+### Authorized follow-up — borrowing-history CSV export
+
+**Status: fixed.** The user initially chose to report the issue separately, then explicitly requested its repair on October 26. This follow-up expands the earlier UI-only scope solely to fix streamed-response disposal.
+
+Authenticated `GET /BorrowingHistory/Export` under default Kestrel response settings previously failed when `BorrowingHistoryController.Export` disposed its `StreamWriter` synchronously after `FlushAsync`. Kestrel threw **“Synchronous operations are disallowed”** from `StreamWriter.Dispose`, terminating the response prematurely. Changed exactly `using var writer` to `await using var writer`. The response stream stays open, and formatting, filters, authorization, encoding and filename generation remain unchanged. Synchronous server IO was not enabled.
+
+`Csv_export_completes_under_default_Kestrel_response_rules` now passes against real Kestrel/MVC with disposable SQLite records. It verifies a completed HTTP 200 response, CSV content type, attachment filename, exact formatter header and seeded equipment data. It remains an ordinary regression test; its obsolete `KnownExistingIssue` trait was removed. The continuation contract checker verifies the entire controller equals its baseline plus this exact one-line disposal change, while continuing to reject other backend edits.
+
+Post-repair verification: the **unfiltered Release suite passed: 371 passed, 18 opt-in tests skipped, 0 failed** (389 total). The dedicated export test, all 51 view contracts and `git diff --check` passed. Test results: `ASI.Basecode.Tests/TestResults/csv-fix-regression.trx` (local ignored artifact). No production database was modified. Rebuild/restart the application to load the repaired controller.
+
+Acceptance disposition: Custodian/Admin UI implementation and scoped responsive/accessibility checks are complete, and the CSV export exception is resolved. The production SQL concurrency and live-email verification limits above remain explicit; this does not establish production deployment acceptance. WBS statuses/dates/owners and milestone checkboxes are unchanged; the migration and separately authorized repair are recorded under Additional work.
+
+### Review follow-up — login lockout, October 27, 2026
+
+At the user's request, reverted the separate local authentication relaxation: accounts lock after **5 failed attempts for 15 minutes**, replacing 20 attempts/1 minute. `Startup.Auth.cs` now matches the original Git baseline exactly. The existing login message already says 15 minutes, so it is consistent again. The UI, CSV fix, account data and other Identity settings are preserved; no database migration or account unlock was performed.
+
+The continuation checker now requires the complete baseline authentication file, including when supplied with the older pre-work snapshot. That snapshot's former authentication exception can no longer accept the weaker settings. The remaining separate login-copy file is still verified against its original hash. The 51-view contract check and whitespace check passed.
+
+Post-restoration Release build/regression passed: **371 passed, 18 opt-in tests skipped, 0 failed**. The original lockout settings were verified by comparing the complete production authentication source to the Git baseline; the disposable UI fixture's separate Identity configuration is not evidence of production lockout timing. Rebuild/restart the running application to load the restored policy.
+
+### Continuation Git handoff — October 27, 2026
+
+The scoped handoff includes the 21 migrated Custodian/Admin views, source/compiled styles, category-dialog focus handling, CSV disposal repair, disposable HTTP acceptance tests, the continuation checker and tracker/documentation updates. The separate login-label copy, four earlier Figma tracker notes, design exports and PR review reports remain local. Authentication matches the original policy and has no pending source diff.
+
+`node ASI.Basecode.WebApp/scripts/check-ui-continuation.mjs --staged` reads all audited files directly from the proposed commit's index, including compiled styles, and permits no local-file exemptions. It still requires the full original authentication file and allows only the exact authorized asynchronous CSV disposal change in that controller. The working-tree mode retains hash verification for the separate login-copy edit. The verified comparison base for the PR draft is `origin/staging` at `6803c83d6a2aea89e684ca991fa67868fc593d59`; the full branch includes the earlier phase 0–3/follow-up commit as well as this continuation. No existing PR base could be queried because the GitHub connector is unavailable.

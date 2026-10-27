@@ -24,13 +24,13 @@
     <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@errorMessage</div>
 }
 
-<section aria-labelledby="returns-heading" class="min-w-0">
+<section aria-labelledby="returns-heading" class="role-page">
     <div class="mb-4">
         <h2 id="returns-heading" class="font-display text-2xl font-semibold">Return &amp; condition</h2>
         <p class="mt-1 text-xs text-gray-500">@(showsReturns ? "Newest returns first" : "Earliest due first") · times are Philippine time</p>
     </div>
 
-    <nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter returns">
+    <nav class="filter-tabs" aria-label="Filter returns">
         @foreach (var tab in Model.Tabs)
         {
             var isActive = tab.Value == Model.Tab;
@@ -46,7 +46,7 @@
     }
     else
     {
-        <div class="overflow-x-auto border border-gray-200 bg-white">
+        <div class="table-surface overflow-x-auto">
             <table class="w-full min-w-[680px] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
                     <tr>

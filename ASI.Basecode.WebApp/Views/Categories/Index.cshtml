@@ -17,7 +17,7 @@
     <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@errorMessage</div>
 }
 
-<div class="space-y-6">
+<div class="role-page space-y-6">
     <!-- Page Header -->
     <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -28,7 +28,7 @@
 
     <!-- Tab Navigation Bar -->
     <div class="pb-1">
-        <nav class="flex gap-6" aria-label="Inventory workspace tabs">
+        <nav class="management-tabs" aria-label="Inventory workspace tabs">
             <button type="button"
                     id="tab-btn-equipment"
                     class="tab-btn inline-flex items-center gap-2 py-2 text-sm transition-colors duration-150 @(!isCategoriesTab ? "text-primary-strong font-semibold underline underline-offset-8 decoration-2 decoration-primary-strong" : "text-gray-500 hover:text-primary-strong font-medium no-underline")"
@@ -60,7 +60,7 @@
     <section id="tab-panel-equipment" class="tab-panel space-y-4 @(isCategoriesTab ? "hidden" : "")" aria-labelledby="tab-btn-equipment">
         <!-- Equipment Header & Action Controls UI Frame -->
         <div class="flex flex-wrap items-end justify-between gap-3">
-            <form method="get" asp-action="Index" class="grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_190px_190px_auto]">
+            <form method="get" asp-action="Index" class="filter-panel inventory-filters">
                 <input type="hidden" name="tab" value="equipment" />
                 <label class="sr-only" for="equipment-search">Search equipment items</label>
                 <input id="equipment-search" name="equipmentSearch" value="@Model.Equipment.Search" type="search" placeholder="Search code, name, serial, location..." class="input" />
@@ -92,7 +92,7 @@
             <a asp-action="CreateEquipment" class="btn-primary min-h-10">+ Register equipment</a>
         </div>
 
-        <div class="overflow-x-auto border border-gray-200 bg-white">
+        <div class="table-surface overflow-x-auto">
             <table class="w-full min-w-[1050px] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
                     <tr>
@@ -203,7 +203,7 @@
     <section id="tab-panel-categories" class="tab-panel space-y-4 @(!isCategoriesTab ? "hidden" : "")" aria-labelledby="tab-btn-categories">
         <!-- Categories Search & Action Controls -->
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <form method="get" asp-action="Index" class="grid flex-1 gap-2 sm:grid-cols-[minmax(200px,1fr)_180px_auto]">
+            <form method="get" asp-action="Index" class="filter-panel category-filters">
                 <input type="hidden" name="tab" value="categories" />
                 <label class="sr-only" for="category-search">Search categories</label>
                 <input id="category-search" name="categorySearch" value="@Model.CategorySearch" type="search" placeholder="Search code, name, description..." class="input" />
@@ -230,7 +230,7 @@
         </div>
 
         <!-- Categories Table (Actions replacing Created Column) -->
-        <div class="overflow-x-auto border border-gray-200 bg-white">
+        <div class="table-surface overflow-x-auto">
             <table class="w-full min-w-[640px] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
                     <tr>
@@ -315,8 +315,8 @@
 </div>
 
 <!-- ========================= CREATE CATEGORY MODAL ========================= -->
-<div id="modal-create-category" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-create-title">
-    <div class="w-full max-w-lg border border-gray-200 bg-white p-6 shadow-2xl">
+<div id="modal-create-category" class="management-modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-create-title">
+    <div class="management-modal-card w-full max-w-lg bg-white p-6 shadow-2xl">
         <div class="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
             <h3 id="modal-create-title" class="font-display text-xl font-semibold text-ink">Create equipment category</h3>
             <button type="button" class="btn-close-modal text-gray-400 hover:text-ink text-lg font-bold" aria-label="Close modal">&times;</button>
@@ -350,7 +350,7 @@
                 </div>
             </div>
 
-            <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4">
+            <div class="form-actions">
                 <button type="button" class="btn-close-modal border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-400">Cancel</button>
                 <button type="submit" class="btn-primary">Create category</button>
             </div>
@@ -359,8 +359,8 @@
 </div>
 
 <!-- ========================= EDIT CATEGORY MODAL ========================= -->
-<div id="modal-edit-category" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
-    <div class="w-full max-w-lg border border-gray-200 bg-white p-6 shadow-2xl">
+<div id="modal-edit-category" class="management-modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+    <div class="management-modal-card w-full max-w-lg bg-white p-6 shadow-2xl">
         <div class="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
             <h3 id="modal-edit-title" class="font-display text-xl font-semibold text-ink">Edit category</h3>
             <button type="button" class="btn-close-modal text-gray-400 hover:text-ink text-lg font-bold" aria-label="Close modal">&times;</button>
@@ -396,7 +396,7 @@
                 </div>
             </div>
 
-            <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4">
+            <div class="form-actions">
                 <button type="button" class="btn-close-modal border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-400">Cancel</button>
                 <button type="submit" class="btn-primary">Save changes</button>
             </div>
@@ -405,7 +405,7 @@
 </div>
 
 <!-- ========================= DEACTIVATE / ACTIVATE MODAL ========================= -->
-<div id="modal-status-category" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-status-title">
+<div id="modal-status-category" class="management-modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-status-title">
     <div class="w-full max-w-md border border-gray-200 bg-white p-6 shadow-2xl">
         <div class="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
             <h3 id="modal-status-title" class="font-display text-xl font-semibold text-ink">Deactivate category</h3>
@@ -423,7 +423,7 @@
                 Existing equipment items and reservation history in this category will remain preserved, but new items cannot be registered under it while deactivated.
             </p>
 
-            <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4">
+            <div class="form-actions">
                 <button type="button" class="btn-close-modal border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-400">Cancel</button>
                 <button type="submit" id="btn-status-confirm" class="btn-primary">Confirm</button>
             </div>
@@ -432,6 +432,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/management-modals.js" asp-append-version="true"></script>
     <partial name="_ValidationScriptsPartial" />
     <script>
         (() => {

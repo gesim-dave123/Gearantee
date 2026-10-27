@@ -166,6 +166,32 @@
   .surface-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
   .surface-title { color: var(--color-ink); font-size: 1.15rem; line-height: 1.35; font-weight: 600; letter-spacing: -.015em; }
   .surface-caption { margin-top: .3rem; font-size: .8rem; line-height: 1.6; color: var(--color-gray-500); }
+  .role-page { min-width: 0; }
+  .role-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.1rem; margin-bottom: 1.25rem; }
+  .operations-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); align-items: start; gap: 1.25rem; }
+  .support-stack { display: grid; align-content: start; gap: 1.25rem; min-width: 0; }
+  .management-grid { display: grid; align-items: start; gap: 1.25rem; min-width: 0; }
+  .form-layout { max-width: 960px; margin-inline: auto; }
+  .form-layout--wide { max-width: 1152px; }
+  .form-grid > div { min-width: 0; }
+  .form-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .75rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--color-gray-200); }
+  .record-details > div { min-width: 0; padding: .85rem; border-radius: .8rem; background: var(--color-gray-50); }
+  .record-details dd { overflow-wrap: anywhere; line-height: 1.65; }
+  .workflow-action { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--color-gray-200); border-radius: 1rem; background: var(--color-gray-50); }
+  .inventory-board { display: grid; gap: 1rem; }
+  .inventory-category { min-width: 0; padding: 1rem; border-radius: 1rem; background: var(--color-gray-50); }
+  .inventory-bar { border-radius: 999px; }
+  .inventory-bar > span:first-child { background: var(--color-primary-strong); }
+  .inventory-filters { flex: 1; margin-bottom: 0; grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(140px, .7fr)) auto; }
+  .category-filters { flex: 1; margin-bottom: 0; grid-template-columns: minmax(180px, 1fr) minmax(150px, .6fr) auto; }
+  .user-filters { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
+  .report-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-panel--compact { display: flex; flex-wrap: wrap; align-items: center; }
+  .filter-panel--compact > div { flex: 1; min-width: min(100%, 220px); }
+  .management-tabs { display: flex; flex-wrap: wrap; gap: .5rem; padding: .35rem; width: fit-content; max-width: 100%; background: white; border-radius: 1.1rem; }
+  .management-modal-card { max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain; border-radius: 1.4rem; }
+  .import-guidance { padding: 1.25rem 1.25rem 1.25rem 2.25rem; border-radius: 1rem; background: var(--color-tint-soft); }
+  .upload-panel { margin-top: 1.5rem; padding: 1.25rem; border: 1px dashed var(--color-primary); border-radius: 1rem; background: var(--color-gray-50); }
   .page-intro { margin-bottom: 1.25rem; }
   .page-intro h2, .page-intro h1 { color: var(--color-ink); font-weight: 600; font-size: 1.5rem; letter-spacing: -.025em; }
   .summary-card { min-height: 140px; border-radius: 1.4rem; background: white; padding: 1.25rem; }
@@ -297,6 +323,61 @@
 }
 
 /* These accent colors must also win over the existing text utility classes. */
+.role-summary > :last-child { background: var(--color-primary-strong); }
+.role-summary > :last-child p { color: white; }
+.role-summary > :last-child .status-badge { color: white; background: rgb(255 255 255 / .16); }
+.role-page .surface-heading { border-bottom: 0; }
+.role-page .surface h2, .role-page .surface h3 { letter-spacing: -.02em; }
+.role-page .desk-task { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding: 1.1rem 0; }
+.desk-task-code { align-self: start; padding-top: .3rem; }
+.desk-task-actions { display: flex; align-items: flex-end; flex-direction: column; gap: .6rem; }
+.desk-task-actions > [aria-disabled] { border-radius: .7rem; }
+.role-page .desk-task:first-child { padding-top: .25rem; }
+.role-page .desk-task:last-child { padding-bottom: .25rem; }
+.role-page .filter-tabs :is(a, button) { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; border: 1px solid transparent; border-radius: 999px; padding: .65rem 1rem; background: white; color: var(--color-gray-700); }
+.role-page .filter-tabs [aria-current="page"] { background: var(--color-primary-strong); color: white; }
+.role-page .filter-tabs [aria-current="page"] span { color: white; }
+.management-tabs button { min-height: 44px; padding: .65rem 1rem; border-radius: .8rem; text-decoration: none; }
+.management-tabs [aria-selected="true"] { color: white; background: var(--color-primary-strong); }
+.role-page .table-surface { border: 1px solid rgb(217 217 220 / .45); }
+.role-page .table-surface th { padding-block: 1rem; background: var(--color-tint-soft); color: var(--color-primary-strong); font-size: .75rem; font-weight: 600; }
+.role-page .table-surface tbody td { padding-block: .9rem; }
+.role-page .table-surface tbody tr:last-child td { border-bottom: 0; }
+.role-page .form-section legend { float: none; margin-bottom: .75rem; }
+.role-page .form-section label:has(input[type="checkbox"]) { min-height: 44px; padding: .65rem .9rem; border-radius: .8rem; }
+.role-page .form-section label:has(input[type="checkbox"]:checked) { border-color: var(--color-primary); background: var(--color-tint-soft); }
+.role-page .form-grid .input { min-height: 46px; }
+.role-page .form-grid textarea.input { min-height: 100px; }
+.role-page .surface :is(p, dd, h2, h3) { overflow-wrap: anywhere; }
+.role-page :is(a, button, input, select, textarea):focus-visible, .management-modal :is(button, input, textarea):focus-visible { outline: 2px solid var(--color-primary-strong); outline-offset: 3px; }
+.role-page input[type="file"] { padding: .6rem; background: white; }
+.role-page input[type="file"]::file-selector-button { margin-right: .75rem; padding: .65rem .9rem; border: 0; border-radius: .65rem; background: var(--color-tint-soft); color: var(--color-primary-strong); font: inherit; cursor: pointer; }
+.role-page .report-filters > div:last-child { grid-column: 1 / -1; }
+@media (min-width: 1440px) { .management-grid { grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr); } }
+@media (max-width: 1279px) {
+  .role-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .operations-grid { grid-template-columns: minmax(0, 1fr); }
+  .inventory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .user-filters, .category-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .category-filters > button { grid-column: 1 / -1; }
+}
+@media (max-width: 599px) {
+  .role-page .desk-task { grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+  .desk-task-code, .desk-task-actions { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: .6rem; }
+  .role-summary { gap: .65rem; }
+  .role-page .input { font-size: 1rem; }
+  .filter-panel.inventory-filters, .filter-panel.category-filters, .filter-panel.user-filters, .filter-panel.report-filters { grid-template-columns: minmax(0, 1fr); }
+  .filter-panel--compact { flex-direction: column; align-items: stretch; }
+  .filter-panel--compact > div { width: 100%; }
+  .workflow-action, .upload-panel { padding: 1rem; }
+  .form-actions { align-items: stretch; }
+  .form-actions > :is(a, button) { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; flex: 1; }
+  .management-modal-card { padding: 1.1rem; }
+}
+@media (prefers-reduced-motion: reduce) { .workspace-sidebar { transition: none; } }
 .borrower-summary > :last-child .eyebrow,
 .borrower-summary > :last-child > p { color: white; }
 .borrower-summary > :last-child .status-badge { background: rgb(255 255 255 / .15); color: white; }

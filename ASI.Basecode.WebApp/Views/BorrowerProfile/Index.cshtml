@@ -15,14 +15,15 @@
     <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@errorMessage</div>
 }
 
-<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+<section class="role-page">
+<div class="page-intro mb-4 flex flex-wrap items-center justify-between gap-3">
     <div>
         <h2 class="font-display text-2xl font-semibold">Borrower profiles</h2>
         <p class="mt-1 text-xs text-gray-500">@Model.TotalCount record@(Model.TotalCount == 1 ? "" : "s") · eligibility controls who can submit reservation requests</p>
     </div>
 </div>
 
-<form method="get" asp-action="Index" class="mb-4 flex flex-wrap items-center gap-2">
+<form method="get" asp-action="Index" class="filter-panel filter-panel--compact">
     <div class="flex-1">
         <label class="sr-only" for="borrower-search">Search borrower profiles</label>
         <input id="borrower-search" name="search" value="@Model.Search" type="search" placeholder="Search school ID, name, or department" class="input w-full" />
@@ -30,11 +31,11 @@
     <button type="submit" class="btn-primary">Search</button>
     @if (!string.IsNullOrWhiteSpace(Model.Search))
     {
-        <a asp-action="Index" class="border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700">Clear</a>
+        <a asp-action="Index" class="btn-secondary">Clear</a>
     }
 </form>
 
-<div class="overflow-x-auto border border-gray-200 bg-white">
+<div class="table-surface overflow-x-auto">
     <table class="w-full min-w-[620px] text-left text-sm">
         <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
             <tr>
@@ -84,3 +85,4 @@
             Label = "Borrower profile pages",
             Routes = { ["search"] = Model.Search }
         })" />
+</section>

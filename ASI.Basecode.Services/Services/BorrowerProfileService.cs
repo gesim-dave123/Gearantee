@@ -18,7 +18,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class BorrowerProfileService : ServiceBase, IBorrowerProfileService
     {
-        private const int PageSize = 10;
+        private const int PageSize = PaginationDefaults.PageSize;
 
         private const string StaleMessage =
             "This borrower record changed after you opened it. Reload the page and try again.";

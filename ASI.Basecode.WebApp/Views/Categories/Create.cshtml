@@ -1,15 +1,15 @@
 @model ASI.Basecode.Services.ServiceModels.Category.CreateCategoryViewModel
 
-<div class="mx-auto max-w-3xl">
+<div class="role-page form-layout">
     <a asp-action="Index" class="mb-5 inline-flex text-sm font-semibold text-primary-strong underline underline-offset-4">← Back to categories</a>
-    <section class="border border-gray-200 bg-white p-5 sm:p-8">
+    <section class="surface">
         <h2 class="font-display text-2xl font-semibold">Create equipment category</h2>
         <p class="mt-1 text-sm text-gray-500">Categories classify equipment items for catalog discovery, availability schedules, and inventory tracking.</p>
         
         <form asp-action="Create" method="post" class="mt-6">
             <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
             
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="form-grid grid gap-4 sm:grid-cols-2">
                 <div>
                     <label asp-for="CategoryCode" class="mb-1 block text-sm font-medium"></label>
                     <input asp-for="CategoryCode" class="input uppercase" placeholder="e.g. LAP" autocomplete="off" />
@@ -39,7 +39,7 @@
             </div>
 
             <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-100 pt-5">
-                <a asp-action="Index" class="border border-gray-200 px-4 py-2 text-sm">Cancel</a>
+                <a asp-action="Index" class="btn-secondary">Cancel</a>
                 <button type="submit" class="btn-primary">Create category</button>
             </div>
         </form>

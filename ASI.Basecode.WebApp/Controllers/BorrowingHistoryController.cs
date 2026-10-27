@@ -88,7 +88,7 @@ namespace ASI.Basecode.WebApp.Controllers
             Response.Headers["Content-Disposition"] =
                 $"attachment; filename=\"borrowing-history-{ManilaClock.NowLocal:yyyyMMdd}.csv\"";
 
-            using var writer = new StreamWriter(
+            await using var writer = new StreamWriter(
                 Response.Body,
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 1024,

@@ -100,7 +100,7 @@ namespace ASI.Basecode.Tests.Reservations
         }
 
         [Fact]
-        public void Queue_pages_twenty_requests_per_page()
+        public void Queue_pages_ten_requests_per_page()
         {
             using var fixture = new SqliteDb();
             using var db = fixture.Create();
@@ -121,14 +121,16 @@ namespace ASI.Basecode.Tests.Reservations
 
             var firstPage = service.GetReviewQueue(null, null, 1);
             Assert.Equal(21, firstPage.TotalCount);
-            Assert.Equal(2, firstPage.TotalPages);
-            Assert.Equal(20, firstPage.Items.Count);
+            Assert.Equal(3, firstPage.TotalPages);
+            Assert.Equal(10, firstPage.Items.Count);
 
             var secondPage = service.GetReviewQueue(null, null, 2);
-            Assert.Single(secondPage.Items);
+            Assert.Equal(10, secondPage.Items.Count);
+            Assert.Empty(firstPage.Items.Select(item => item.ReservationId).Intersect(secondPage.Items.Select(item => item.ReservationId)));
+            Assert.Single(service.GetReviewQueue(null, null, 3).Items);
 
             // A page past the end clamps instead of returning nothing.
-            Assert.Equal(2, service.GetReviewQueue(null, null, 99).Page);
+            Assert.Equal(3, service.GetReviewQueue(null, null, 99).Page);
         }
 
         // ---------------------------------------------------------------- approve

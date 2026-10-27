@@ -15,7 +15,7 @@ namespace ASI.Basecode.Services.Services
     /// <summary>Custodian return desk: record returns (WBS 44.00), condition and item status (45.00-46.00), and late returns (47.00).</summary>
     public class ReturnRecordService : IReturnRecordService
     {
-        public const int PageSize = 20;
+        public const int PageSize = PaginationDefaults.PageSize;
         public const string OnLoanTab = "OnLoan";
         public const string OverdueTab = "Overdue";
         public const string ReturnedTab = "Returned";

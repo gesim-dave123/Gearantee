@@ -3,7 +3,7 @@
 @{
     var maxLocal = ManilaClock.NowLocal.ToString("yyyy-MM-ddTHH:mm");
 }
-<div class="grid gap-4 sm:grid-cols-2">
+<div class="inspection-fields form-grid grid gap-4 sm:grid-cols-2">
     <div class="sm:col-span-2">
         <label asp-for="ActualReturnAt" class="mb-1 block text-sm font-medium"></label>
         <input asp-for="ActualReturnAt" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local" max="@maxLocal" class="input" />

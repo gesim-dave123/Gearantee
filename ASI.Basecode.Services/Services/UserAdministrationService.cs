@@ -1,3 +1,4 @@
+using ASI.Basecode.Services.Utilities;
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Services.Interfaces;
@@ -17,7 +18,7 @@ namespace ASI.Basecode.Services.Services
 {
     public partial class UserAdministrationService : IUserAdministrationService
     {
-        private const int PageSize = 10;
+        private const int PageSize = PaginationDefaults.PageSize;
         private const string AdministrationLockName = ASI.Basecode.Services.Utilities.AdministrationLock.ResourceName;
 
         private static readonly IReadOnlyDictionary<string, string> PermissionLabels =

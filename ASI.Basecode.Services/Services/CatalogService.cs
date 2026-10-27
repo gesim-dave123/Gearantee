@@ -11,7 +11,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class CatalogService : ICatalogService
     {
-        public const int PageSize = 12;
+        public const int PageSize = PaginationDefaults.PageSize;
         private const int MaxBookedWindows = 20;
 
         private readonly IEquipmentItemRepository _equipmentItemRepository;

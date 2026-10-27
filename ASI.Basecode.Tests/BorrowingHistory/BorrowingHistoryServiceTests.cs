@@ -188,7 +188,7 @@ namespace ASI.Basecode.Tests.BorrowingHistory
             var profile = DashboardSeed.Profile(db, user);
             var item = DashboardSeed.Item(db, "CAM-1");
 
-            for (var index = 0; index < BorrowingHistoryService.PageSize + 2; index++)
+            for (var index = 0; index < 12; index++)
             {
                 var start = now.AddDays(index);
                 DashboardSeed.Reservation(
@@ -204,7 +204,10 @@ namespace ASI.Basecode.Tests.BorrowingHistory
                 new BorrowingHistoryFilterViewModel { Page = 2 },
                 user.Id,
                 onlyOwnHistory: false);
-            Assert.Equal(BorrowingHistoryService.PageSize + 2, secondPage.TotalCount);
+            var firstPage = await Service(db, now).GetHistoryAsync(
+                new BorrowingHistoryFilterViewModel(), user.Id, onlyOwnHistory: false);
+            Assert.Equal(10, firstPage.Items.Count);
+            Assert.Equal(12, secondPage.TotalCount);
             Assert.Equal(2, secondPage.TotalPages);
             Assert.Equal(2, secondPage.Items.Count);
 

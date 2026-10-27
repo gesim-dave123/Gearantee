@@ -1,3 +1,4 @@
+using ASI.Basecode.Services.Utilities;
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Services.Interfaces;
@@ -14,7 +15,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class EquipmentItemService : ServiceBase, IEquipmentItemService
     {
-        private const int PageSize = 10;
+        private const int PageSize = PaginationDefaults.PageSize;
         private static readonly string[] EditableStatuses =
         {
             DomainValues.EquipmentStatuses.Available,

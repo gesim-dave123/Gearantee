@@ -8,11 +8,11 @@
 
 @if (!string.IsNullOrWhiteSpace(successMessage))
 {
-    <div class="mb-5 border-l-4 border-primary bg-white px-4 py-3 text-sm" role="status">@successMessage</div>
+    <div class="notice" role="status">@successMessage</div>
 }
 @if (!string.IsNullOrWhiteSpace(errorMessage))
 {
-    <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@errorMessage</div>
+    <div class="notice" role="alert">@errorMessage</div>
 }
 
 <section aria-labelledby="reservations-heading" class="min-w-0">
@@ -27,7 +27,7 @@
         }
     </div>
 
-    <nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
+    <nav class="filter-tabs" aria-label="Filter by status">
         @foreach (var tab in Model.Tabs)
         {
             var isActive = tab.Value == Model.StatusFilter;
@@ -44,7 +44,7 @@
     }
     else
     {
-        <div class="overflow-x-auto border border-gray-200 bg-white">
+        <div class="table-surface">
             <table class="w-full min-w-[680px] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
                     <tr>
@@ -81,18 +81,11 @@
             </table>
         </div>
 
-        <nav class="mt-6 flex items-center justify-between text-xs text-gray-500" aria-label="Reservation pages">
-            <span>Page @Model.Page of @Model.TotalPages · @Model.TotalCount reservation@(Model.TotalCount == 1 ? "" : "s")</span>
-            <div class="flex gap-2">
-                @if (Model.Page > 1)
-                {
-                    <a asp-action="Index" asp-route-status="@(string.IsNullOrEmpty(Model.StatusFilter) ? null : Model.StatusFilter)" asp-route-page="@(Model.Page - 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Previous</a>
-                }
-                @if (Model.Page < Model.TotalPages)
-                {
-                    <a asp-action="Index" asp-route-status="@(string.IsNullOrEmpty(Model.StatusFilter) ? null : Model.StatusFilter)" asp-route-page="@(Model.Page + 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Next</a>
-                }
-            </div>
-        </nav>
+        <partial name="Components/_Pagination" model="@(new PaginationViewModel
+        {
+            Page = Model.Page, TotalPages = Model.TotalPages, TotalCount = Model.TotalCount,
+            Label = "Reservation pages",
+            Routes = { ["status"] = Model.StatusFilter }
+        })" />
     }
 </section>

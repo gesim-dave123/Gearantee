@@ -15,7 +15,7 @@ namespace ASI.Basecode.Services.Services
 {
     public class BorrowingHistoryService : IBorrowingHistoryService
     {
-        public const int PageSize = 25;
+        public const int PageSize = PaginationDefaults.PageSize;
         public const int MaxFilterLength = 100;
 
         private static readonly string[] Statuses =

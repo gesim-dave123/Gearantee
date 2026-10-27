@@ -151,6 +151,51 @@ namespace ASI.Basecode.WebApp.Data
                 userManager,
                 configuration,
                 logger);
+            await SeedCustodianAsync(userManager, configuration, logger);
+        }
+
+        private static async Task SeedCustodianAsync(
+            UserManager<ApplicationUser> userManager,
+            IConfiguration configuration,
+            ILogger logger)
+        {
+            var email = configuration["SeedCustodian:Email"];
+            var password = configuration["SeedCustodian:Password"];
+            var userCode = configuration["SeedCustodian:UserCode"];
+
+            if (string.IsNullOrWhiteSpace(email) ||
+                string.IsNullOrWhiteSpace(password) ||
+                string.IsNullOrWhiteSpace(userCode))
+            {
+                logger.LogInformation(
+                    "SeedCustodian values are not configured; skipping custodian seeding. Configure SeedCustodian:Email, SeedCustodian:Password, and SeedCustodian:UserCode explicitly.");
+                return;
+            }
+
+            // Reseeding must not reset credentials, reactivate accounts or restore revoked roles.
+            if (await userManager.FindByEmailAsync(email) != null ||
+                await userManager.FindByNameAsync(userCode) != null)
+            {
+                logger.LogInformation("Custodian seed account already exists; leaving it unchanged.");
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = userCode,
+                UserCode = userCode,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = configuration["SeedCustodian:FirstName"] ?? "Equipment",
+                LastName = configuration["SeedCustodian:LastName"] ?? "Custodian",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            EnsureSucceeded(await userManager.CreateAsync(user, password), "create the initial custodian");
+            EnsureSucceeded(
+                await userManager.AddToRoleAsync(user, DomainValues.Roles.Custodian),
+                "assign the Custodian role");
         }
 
         private static async Task SeedAdministratorAsync(

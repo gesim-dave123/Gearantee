@@ -1,4 +1,5 @@
-using ASI.Basecode.Data.Models;
+﻿using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.ServiceModels.UserAdministration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -14,6 +15,8 @@ namespace ASI.Basecode.Services.Services
     {
         public async Task<UserAdministrationResult> CreateAsync(string actorUserId, CreateUserViewModel model)
         {
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrationTransactionAsync();
             try
             {
@@ -32,6 +35,7 @@ namespace ASI.Basecode.Services.Services
                 await RollbackCreationAsync(transaction);
                 throw;
             }
+            });
         }
 
         public async Task<UserImportResult> ImportAsync(string actorUserId, IReadOnlyList<UserImportRow> rows)
@@ -48,6 +52,8 @@ namespace ASI.Basecode.Services.Services
             }
             if (errors.Count > 0) return new UserImportResult { Errors = errors };
 
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrationTransactionAsync();
             var currentRow = 0;
             try
@@ -95,6 +101,7 @@ namespace ASI.Basecode.Services.Services
                 await RollbackCreationAsync(transaction);
                 throw;
             }
+            });
         }
 
         private static List<UserImportError> ValidateAccountFields(CreateUserViewModel model, int row)
@@ -118,12 +125,12 @@ namespace ASI.Basecode.Services.Services
                 errors.Add(new(row, "Email", "Email is already in use."));
             if (await _db.Users.AnyAsync(user => user.UserCode == model.UserCode.Trim()))
                 errors.Add(new(row, "UserCode", "User code is already in use."));
-            if (string.Equals(role?.Name, DomainValues.Roles.Borrower, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(role?.Name, DomainValues.Roles.Borrower, StringComparison.OrdinalIgnoreCase))
             {
                 if (string.IsNullOrWhiteSpace(model.SchoolId))
                     errors.Add(new(row, "SchoolId", "Borrowers need a school ID."));
-                else if (await _db.BorrowerProfiles.AnyAsync(profile => profile.SchoolId == model.SchoolId.Trim()))
-                    errors.Add(new(row, "SchoolId", "School ID is already in use."));
+                else if (!string.Equals(model.SchoolId.Trim(), model.UserCode?.Trim(), StringComparison.Ordinal))
+                    errors.Add(new(row, "SchoolId", "School ID must match the user code."));
                 if (string.IsNullOrWhiteSpace(model.Department))
                     errors.Add(new(row, "Department", "Borrowers need a department."));
             }

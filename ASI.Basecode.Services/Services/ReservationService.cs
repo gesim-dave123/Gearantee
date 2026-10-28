@@ -1,6 +1,7 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels.Reservations;
 using ASI.Basecode.Services.Utilities;
@@ -40,6 +41,7 @@ namespace ASI.Basecode.Services.Services
         };
 
         private readonly AsiBasecodeDBContext _db;
+        private readonly IAuditService _auditService;
         private readonly IReservationRepository _reservationRepository;
         private readonly IEquipmentItemRepository _equipmentItemRepository;
         private readonly IBorrowerProfileRepository _borrowerProfileRepository;
@@ -50,12 +52,14 @@ namespace ASI.Basecode.Services.Services
             IReservationRepository reservationRepository,
             IEquipmentItemRepository equipmentItemRepository,
             IBorrowerProfileRepository borrowerProfileRepository,
+            IAuditService auditService,
             TimeProvider timeProvider)
         {
-            _db = (AsiBasecodeDBContext)unitOfWork.Database;
+            _db = unitOfWork.Context;
             _reservationRepository = reservationRepository;
             _equipmentItemRepository = equipmentItemRepository;
             _borrowerProfileRepository = borrowerProfileRepository;
+            _auditService = auditService;
             _timeProvider = timeProvider;
         }
 
@@ -135,64 +139,68 @@ namespace ASI.Basecode.Services.Services
                 UpdatedAt = nowUtc
             };
 
-            // Inventory changes and reservation submissions acquire the equipment row lock
-            // first. All reservation checks and the insert stay inside that serializable
-            // boundary, so a concurrent archive/status change cannot invalidate an earlier
-            // availability check (CONC-01).
-            using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return strategy.Execute(() =>
             {
-                var lockedItem = EquipmentItemConcurrencyLock.LoadForUpdate(_db, model.EquipmentId);
-                if (lockedItem == null)
+                // Inventory changes and reservation submissions acquire the equipment row lock
+                // first. All reservation checks and the insert stay inside that serializable
+                // boundary, so a concurrent archive/status change cannot invalidate an earlier
+                // availability check (CONC-01).
+                using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
                 {
-                    return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
+                    var lockedItem = _equipmentItemRepository.LoadForUpdate(model.EquipmentId);
+                    if (lockedItem == null)
+                    {
+                        return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
+                    }
+
+                    // D3: one open request per borrower, item, and window. Acquire this second lock
+                    // only after the shared item lock; the order is consistent across submissions.
+                    _reservationRepository.AcquireSubmissionLock(profileId, model.EquipmentId);
+
+                    var itemIsReservable = _equipmentItemRepository.GetEquipmentItems()
+                        .AsNoTracking()
+                        .Where(ReservationAvailability.IsReservable())
+                        .Any(item => item.EquipmentId == model.EquipmentId);
+                    if (!itemIsReservable)
+                    {
+                        return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
+                    }
+
+                    var isBooked = _reservationRepository.GetReservations()
+                        .Where(reservation => reservation.EquipmentId == model.EquipmentId)
+                        .Any(ReservationAvailability.Blocks(startUtc, endUtc, nowUtc));
+                    if (isBooked)
+                    {
+                        return ReservationResult.Fail("This item is already booked or still on loan during that time. Pick a time outside the booked times.");
+                    }
+
+                    // A Pending request whose start has passed is Expired (D2), so it no longer
+                    // counts. The check and insert remain protected by both locks (RES-01).
+                    var hasDuplicate = _reservationRepository.GetReservations()
+                        .Any(reservation =>
+                            reservation.BorrowerProfileId == profileId &&
+                            reservation.EquipmentId == model.EquipmentId &&
+                            reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                            reservation.ReservationStart > nowUtc &&
+                            reservation.ReservationStart < endUtc &&
+                            reservation.ReservationEnd > startUtc);
+                    if (hasDuplicate)
+                    {
+                        return ReservationResult.Fail("You already have a pending request for this item that overlaps this time.");
+                    }
+
+                    _reservationRepository.AddReservation(newReservation);
+                    transaction.Commit();
                 }
 
-                // D3: one open request per borrower, item, and window. Acquire this second lock
-                // only after the shared item lock; the order is consistent across submissions.
-                _reservationRepository.AcquireSubmissionLock(profileId, model.EquipmentId);
-
-                var itemIsReservable = _equipmentItemRepository.GetEquipmentItems()
-                    .AsNoTracking()
-                    .Where(ReservationAvailability.IsReservable())
-                    .Any(item => item.EquipmentId == model.EquipmentId);
-                if (!itemIsReservable)
+                return new ReservationResult
                 {
-                    return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
-                }
-
-                var isBooked = _reservationRepository.GetReservations()
-                    .Where(reservation => reservation.EquipmentId == model.EquipmentId)
-                    .Any(ReservationAvailability.Blocks(startUtc, endUtc, nowUtc));
-                if (isBooked)
-                {
-                    return ReservationResult.Fail("This item is already booked or still on loan during that time. Pick a time outside the booked times.");
-                }
-
-                // A Pending request whose start has passed is Expired (D2), so it no longer
-                // counts. The check and insert remain protected by both locks (RES-01).
-                var hasDuplicate = _reservationRepository.GetReservations()
-                    .Any(reservation =>
-                        reservation.BorrowerProfileId == profileId &&
-                        reservation.EquipmentId == model.EquipmentId &&
-                        reservation.Status == DomainValues.ReservationStatuses.Pending &&
-                        reservation.ReservationStart > nowUtc &&
-                        reservation.ReservationStart < endUtc &&
-                        reservation.ReservationEnd > startUtc);
-                if (hasDuplicate)
-                {
-                    return ReservationResult.Fail("You already have a pending request for this item that overlaps this time.");
-                }
-
-                _reservationRepository.AddReservation(newReservation);
-                transaction.Commit();
-            }
-
-            return new ReservationResult
-            {
-                Succeeded = true,
-                Message = "Reservation request submitted. A custodian will review it.",
-                ReservationId = newReservation.ReservationId
-            };
+                    Succeeded = true,
+                    Message = "Reservation request submitted. A custodian will review it.",
+                    ReservationId = newReservation.ReservationId
+                };
+            });
         }
 
         public ReservationIndexViewModel GetMyReservations(string userId, string status, int page)
@@ -376,7 +384,7 @@ namespace ASI.Basecode.Services.Services
                 queue = queue.Where(reservation =>
                     reservation.EquipmentItem.ItemCode.ToLower().Contains(term) ||
                     reservation.EquipmentItem.ItemName.ToLower().Contains(term) ||
-                    reservation.BorrowerProfile.SchoolId.ToLower().Contains(term) ||
+                    reservation.BorrowerProfile.User.UserCode.ToLower().Contains(term) ||
                     reservation.BorrowerProfile.User.FirstName.ToLower().Contains(term) ||
                     reservation.BorrowerProfile.User.LastName.ToLower().Contains(term));
             }
@@ -451,16 +459,18 @@ namespace ASI.Basecode.Services.Services
                 return ReservationResult.Missing();
             }
 
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return strategy.Execute(() =>
+            {
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
-                AcquireAdministrationReadLock();
                 if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
                 {
                     return ReservationResult.Denied(DeniedMessage);
                 }
 
-                // Lock ordering: administration lock -> equipment row -> reservation state.
-                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, equipmentId.Value);
+                // Lock ordering: equipment row lock -> reservation state.
+                var item = _equipmentItemRepository.LoadForUpdate(equipmentId.Value);
                 if (item == null)
                 {
                     return ReservationResult.Fail("This item is archived or no longer exists, so its request can't be approved.");
@@ -552,6 +562,7 @@ namespace ASI.Basecode.Services.Services
             return ReservationResult.Success(
                 "Reservation approved. The borrower can pick the item up.",
                 reservationId);
+            });
         }
         public ReservationResult RejectReservation(string actorUserId, long reservationId, string reason)
         {
@@ -573,9 +584,11 @@ namespace ASI.Basecode.Services.Services
 
             var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return strategy.Execute(() =>
+            {
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
-                AcquireAdministrationReadLock();
                 if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
                 {
                     return ReservationResult.Denied(DeniedMessage);
@@ -617,7 +630,9 @@ namespace ASI.Basecode.Services.Services
             }
 
             return ReservationResult.Success("Reservation rejected.", reservationId);
+            });
         }
+
         public ReservationResult ReleaseEquipment(string actorUserId, long reservationId, string notes)
         {
             if (!CanReview(actorUserId, DomainValues.Permissions.TransactionReleaseReturn))
@@ -645,16 +660,18 @@ namespace ASI.Basecode.Services.Services
 
             var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return strategy.Execute(() =>
+            {
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
-                AcquireAdministrationReadLock();
                 if (!CanReview(actorUserId, DomainValues.Permissions.TransactionReleaseReturn))
                 {
                     return ReservationResult.Denied(DeniedMessage);
                 }
 
-                // Lock ordering: administration lock -> equipment row -> reservation state.
-                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, equipmentId.Value);
+                // Lock ordering: equipment row lock -> reservation state.
+                var item = _equipmentItemRepository.LoadForUpdate(equipmentId.Value);
                 if (item == null)
                 {
                     return ReservationResult.Fail("This item is archived or no longer exists, so its release can't be recorded.");
@@ -730,26 +747,9 @@ namespace ASI.Basecode.Services.Services
             return ReservationResult.Success(
                 "Release recorded. The item is now marked as borrowed.",
                 reservationId);
+            });
         }
 
-        // Shared mode makes review/release writes serialize with UserAdministrationService's
-        // exclusive permission-change lock. No-op for SQLite, where it is a test-only provider.
-        private void AcquireAdministrationReadLock()
-        {
-            if (!_db.Database.IsSqlServer())
-            {
-                return;
-            }
-
-            _db.Database.ExecuteSqlInterpolated(
-                $@"DECLARE @lockResult int;
-EXEC @lockResult = sys.sp_getapplock
-    @Resource = {AdministrationLock.ResourceName},
-    @LockMode = 'Shared',
-    @LockOwner = 'Transaction',
-    @LockTimeout = 15000;
-IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.', 1;");
-        }
         private bool CanReview(string actorUserId, string permissionName)
         {
             if (string.IsNullOrWhiteSpace(actorUserId))
@@ -860,14 +860,7 @@ IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.
 
         private void AddAudit(string actorUserId, string targetUserId, string action, object details)
         {
-            _db.AdministrationAuditEvents.Add(new AdministrationAuditEvent
-            {
-                ActorUserId = actorUserId,
-                TargetUserId = targetUserId,
-                Action = action,
-                DetailsJson = JsonSerializer.Serialize(details),
-                OccurredAt = DateTime.UtcNow
-            });
+            _auditService.Stage(actorUserId, targetUserId, action, details);
         }
 
         private sealed class ReviewState
@@ -967,7 +960,7 @@ IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.
                     : null,
                 BorrowerFirstName = reservation.BorrowerProfile.User.FirstName,
                 BorrowerLastName = reservation.BorrowerProfile.User.LastName,
-                SchoolId = reservation.BorrowerProfile.SchoolId,
+                SchoolId = reservation.BorrowerProfile.User.UserCode,
                 Department = reservation.BorrowerProfile.Department,
                 ReleaseNotes = reservation.ReleaseRecord != null
                     ? reservation.ReleaseRecord.Notes

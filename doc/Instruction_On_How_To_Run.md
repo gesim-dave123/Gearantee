@@ -87,6 +87,16 @@ dotnet ef database update --project ".\ASI.Basecode.Data\ASI.Basecode.Data.cspro
 
 Do not create another initial migration when the existing migration has already been applied.
 
+### Existing databases: schema normalization (October 2026 refactor)
+
+If your local `GearanteeDev` was created before the backend architecture refactor, run the command from section 3 once after pulling. The `NormalizeUserAndBorrowerSchema` migration:
+
+- Drops the `BorrowerProfile.SchoolId` column (borrower identity now lives only in `AspNetUsers.UserName`, exposed as `IdNumber`)
+- Drops the `RolePermissionSeed` table
+- Drops the unused `AspNetUserLogins` table
+
+**Warning:** these drops are destructive. Any values stored in `BorrowerProfile.SchoolId` are permanently deleted. Registration and administration code now derives the borrower's displayed school ID from the account's user code, so no backfill is needed. The application still runs if you skip this migration (EF ignores the leftover columns), but your schema stays out of date until you apply it. The seeder runs automatically at application startup and needs no manual step.
+
 ## 4. Configure password-reset email for local development
 
 The password-reset flow sends a six-digit OTP through Brevo. Keep the API key and verified sender email outside the repository by using .NET User Secrets:

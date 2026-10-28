@@ -202,11 +202,6 @@ namespace ASI.Basecode.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<string>("SchoolId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -218,9 +213,6 @@ namespace ASI.Basecode.Data.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("BorrowerProfileId");
-
-                    b.HasIndex("SchoolId")
-                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -610,17 +602,6 @@ namespace ASI.Basecode.Data.Migrations
                     b.ToTable("RolePermission", (string)null);
                 });
 
-            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
-                {
-                    b.Property<string>("RoleId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("RoleId");
-
-                    b.ToTable("RolePermissionSeed", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -696,28 +677,6 @@ namespace ASI.Basecode.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AspNetUserClaims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
-                {
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("LoginProvider", "ProviderKey");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("AspNetUserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -889,15 +848,6 @@ namespace ASI.Basecode.Data.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -908,15 +858,6 @@ namespace ASI.Basecode.Data.Migrations
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
-                {
-                    b.HasOne("ASI.Basecode.Data.Models.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.HasOne("ASI.Basecode.Data.Models.ApplicationUser", null)
                         .WithMany()

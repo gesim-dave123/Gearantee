@@ -88,10 +88,10 @@ namespace ASI.Basecode.Services.ServiceModels.Returns
         public int TotalPages { get; set; } = 1;
     }
 
-    public class ReturnRecordResult
+    public class ReturnRecordResult : Common.ServiceResult
     {
-        public bool Succeeded { get; set; }
-        public string Message { get; set; } = string.Empty;
+        public new bool Succeeded { get; set; }
+        public new string Message { get; set; } = string.Empty;
         public long? ReturnRecordId { get; set; }
 
         // Controller returns 404

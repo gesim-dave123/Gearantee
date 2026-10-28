@@ -1,4 +1,5 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.WebApp.Configuration;
 using ASI.Basecode.WebApp.Extensions.Configuration;
 using ASI.Basecode.Services.Services;
 using Microsoft.AspNetCore.Builder;

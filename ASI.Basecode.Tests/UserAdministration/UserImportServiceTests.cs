@@ -38,7 +38,7 @@ namespace ASI.Basecode.Tests.UserAdministration
             Assert.Equal(3, await db.Users.CountAsync());
             Assert.Equal(3, await db.UserRoles.CountAsync());
             var profile = await db.BorrowerProfiles.SingleAsync();
-            Assert.Equal("0001", profile.SchoolId);
+            Assert.Equal("0001", (await db.Users.SingleAsync(user => user.Id == profile.UserId)).UserName);
             Assert.False(profile.IsEligible);
             var audits = await db.AdministrationAuditEvents.ToListAsync();
             Assert.Equal(2, audits.Count);
@@ -112,7 +112,7 @@ namespace ASI.Basecode.Tests.UserAdministration
         public Task LaterFailureRollsBackEarlierAccounts() => CheckRollback(false);
 
         [Fact]
-        public async Task ExistingSchoolIdRejectsBatch_RealTransitionAuditsOnce_StaleRepeatIsRejected()
+        public async Task MismatchedSchoolIdRejectsBatch_RealTransitionAuditsOnce_StaleRepeatIsRejected()
         {
             await using var environment = await AdministrationTestEnvironment.CreateAsync();
             await using var scope = environment.Provider.CreateAsyncScope();
@@ -120,8 +120,7 @@ namespace ASI.Basecode.Tests.UserAdministration
             var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
             Assert.True((await service.CreateAsync(environment.ActorId, Account("SCHOOL", "Borrower"))).Succeeded);
             var duplicate = Account("DIFFERENT", "Borrower");
-            duplicate.SchoolId = "SCHOOL";
-            Assert.NotEmpty((await service.ImportAsync(environment.ActorId,
+            duplicate.SchoolId = "SCHOOL";            Assert.NotEmpty((await service.ImportAsync(environment.ActorId,
                 new[] { new UserImportRow(2, duplicate) })).Errors);
             Assert.Equal(2, await db.Users.CountAsync());
             var target = await db.Users.SingleAsync(user => user.UserCode == "SCHOOL");

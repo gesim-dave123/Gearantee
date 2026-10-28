@@ -160,13 +160,11 @@ namespace ASI.Basecode.Services.ServiceModels.UserAdministration
         public bool IsActive { get; set; }
     }
 
-    public class UserAdministrationResult
+    public class UserAdministrationResult : Common.ServiceResult
     {
-        public bool Succeeded { get; private set; }
         public bool Forbidden { get; private set; }
         public bool NotFound { get; private set; }
         public bool Conflict { get; private set; }
-        public string Message { get; private set; }
 
         public static UserAdministrationResult Success(string message = null) =>
             new UserAdministrationResult { Succeeded = true, Message = message };

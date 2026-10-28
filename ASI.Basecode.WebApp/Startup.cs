@@ -39,7 +39,14 @@ namespace ASI.Basecode.WebApp
             {
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection"),
-                    sqlServerOptions => sqlServerOptions.CommandTimeout(120));
+                    sqlServerOptions =>
+                    {
+                        sqlServerOptions.CommandTimeout(120);
+                        sqlServerOptions.EnableRetryOnFailure(
+                            maxRetryCount: 5,
+                            maxRetryDelay: TimeSpan.FromSeconds(30),
+                            errorNumbersToAdd: null);
+                    });
             });
 
             ConfigureIdentityAndAuthorization();

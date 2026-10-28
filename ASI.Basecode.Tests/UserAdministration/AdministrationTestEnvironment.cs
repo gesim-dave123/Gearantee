@@ -1,5 +1,7 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Tests.Dashboard;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.Services;
@@ -41,6 +43,7 @@ namespace ASI.Basecode.Tests.UserAdministration
             {
                 services.AddDbContext<SqliteDashboardDbContext>(options => options.UseSqlite(sqlite.Connection).AddInterceptors(Fault));
                 services.AddScoped<AsiBasecodeDBContext>(provider => provider.GetRequiredService<SqliteDashboardDbContext>());
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
                 services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>()
                     .AddEntityFrameworkStores<SqliteDashboardDbContext>().AddDefaultTokenProviders();
             }
@@ -50,6 +53,7 @@ namespace ASI.Basecode.Tests.UserAdministration
                 services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>()
                     .AddEntityFrameworkStores<AsiBasecodeDBContext>().AddDefaultTokenProviders();
             }
+            services.AddScoped<IAuditService, AuditService>();
             services.AddScoped<IUserAdministrationService, UserAdministrationService>();
             services.AddScoped<IBorrowerProfileService, BorrowerProfileService>();
         }

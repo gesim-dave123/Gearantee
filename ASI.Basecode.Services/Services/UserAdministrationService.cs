@@ -1,6 +1,9 @@
-using ASI.Basecode.Services.Utilities;
+﻿using ASI.Basecode.Services.Utilities;
 using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Data.Locks;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels.UserAdministration;
 using Microsoft.AspNetCore.Identity;
@@ -35,16 +38,21 @@ namespace ASI.Basecode.Services.Services
             };
 
         private readonly AsiBasecodeDBContext _db;
+        private readonly IAuditService _auditService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         public UserAdministrationService(
-            AsiBasecodeDBContext db,
+            IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            IAuditService auditService)
         {
-            _db = db;
+            _db = unitOfWork.Context;
+            _unitOfWork = unitOfWork;
             _userManager = userManager;
             _roleManager = roleManager;
+            _auditService = auditService;
         }
 
         public async Task<bool> CanManageAsync(string actorUserId)
@@ -205,7 +213,7 @@ namespace ASI.Basecode.Services.Services
                 Email = user.Email,
                 SelectedRoles = (await _userManager.GetRolesAsync(user)).ToList(),
                 AvailableRoles = await GetRolesAsync(),
-                SchoolId = user.BorrowerProfile?.SchoolId,
+                SchoolId = user.BorrowerProfile != null ? user.UserCode : null,
                 Department = user.BorrowerProfile?.Department,
                 ContactNumber = user.BorrowerProfile?.ContactNumber,
                 BorrowerProfileConcurrencyStamp = user.BorrowerProfile?.ConcurrencyStamp,
@@ -325,20 +333,9 @@ namespace ASI.Basecode.Services.Services
 
                 if (role.Name == DomainValues.Roles.Borrower)
                 {
-                    var schoolId = string.IsNullOrWhiteSpace(model.SchoolId)
-                        ? user.UserCode
-                        : model.SchoolId.Trim();
-                    if (await _db.BorrowerProfiles.AnyAsync(profile =>
-                        profile.SchoolId == schoolId))
-                    {
-                        return UserAdministrationResult.Failure(
-                            "A borrower profile already uses that school ID.");
-                    }
-
                     _db.BorrowerProfiles.Add(new BorrowerProfile
                     {
                         UserId = user.Id,
-                        SchoolId = schoolId,
                         Department = model.Department.Trim(),
                         ContactNumber = CleanOptional(model.ContactNumber),
                         IsEligible = false,
@@ -353,7 +350,7 @@ namespace ASI.Basecode.Services.Services
                     user.Email,
                     role.Name
                 });
-                await _db.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
                 return UserAdministrationResult.Success("Account created.");
             }
             catch (DbUpdateException exception) when (IsUniqueViolation(exception))
@@ -367,6 +364,8 @@ namespace ASI.Basecode.Services.Services
             string actorUserId,
             EditUserViewModel model)
         {
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrationTransactionAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -445,17 +444,6 @@ namespace ASI.Basecode.Services.Services
 
             var profile = await _db.BorrowerProfiles
                 .SingleOrDefaultAsync(item => item.UserId == user.Id);
-            if (needsBorrowerProfile)
-            {
-                var schoolId = model.SchoolId.Trim();
-                if (await _db.BorrowerProfiles.AnyAsync(item =>
-                    item.UserId != user.Id && item.SchoolId == schoolId))
-                {
-                    await transaction.RollbackAsync();
-                    return UserAdministrationResult.Failure(
-                        "A borrower profile already uses that school ID.");
-                }
-            }
 
             var changed = new Dictionary<string, object>();
             var before = new
@@ -464,7 +452,7 @@ namespace ASI.Basecode.Services.Services
                 user.LastName,
                 user.Email,
                 Roles = currentRoles.OrderBy(role => role).ToArray(),
-                SchoolId = profile?.SchoolId,
+                SchoolId = profile != null ? user.UserCode : null,
                 Department = profile?.Department,
                 ContactNumber = profile?.ContactNumber
             };
@@ -524,7 +512,6 @@ namespace ASI.Basecode.Services.Services
                         profile = new BorrowerProfile
                         {
                             UserId = user.Id,
-                            SchoolId = model.SchoolId.Trim(),
                             Department = model.Department.Trim(),
                             IsEligible = false,
                             CreatedAt = DateTime.UtcNow
@@ -533,7 +520,6 @@ namespace ASI.Basecode.Services.Services
                     }
                     else
                     {
-                        profile.SchoolId = model.SchoolId.Trim();
                         profile.Department = model.Department.Trim();
                     }
 
@@ -547,7 +533,7 @@ namespace ASI.Basecode.Services.Services
                 changed["LastName"] = user.LastName;
                 changed["Email"] = user.Email;
                 changed["Roles"] = selectedRoles.OrderBy(role => role).ToArray();
-                changed["SchoolId"] = needsBorrowerProfile ? model.SchoolId.Trim() : profile?.SchoolId;
+                changed["SchoolId"] = needsBorrowerProfile ? user.UserCode : null;
                 changed["Department"] = needsBorrowerProfile ? model.Department.Trim() : profile?.Department;
                 changed["ContactNumber"] = needsBorrowerProfile ? CleanOptional(model.ContactNumber) : profile?.ContactNumber;
 
@@ -556,7 +542,7 @@ namespace ASI.Basecode.Services.Services
                     Before = before,
                     After = changed
                 });
-                await _db.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return UserAdministrationResult.Success("Account updated.");
             }
@@ -572,12 +558,15 @@ namespace ASI.Basecode.Services.Services
                 return UserAdministrationResult.Failure(
                     "The email, user code, or school ID is already in use.");
             }
+            });
         }
 
         public async Task<UserAdministrationResult> SetActiveAsync(
             string actorUserId,
             SetAccountActiveViewModel model)
         {
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrationTransactionAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -637,16 +626,19 @@ namespace ASI.Basecode.Services.Services
             AddAudit(actorUserId, user.Id, null,
                 model.IsActive ? "AccountReactivated" : "AccountDeactivated",
                 new { Before = new { IsActive = previous }, After = new { IsActive = model.IsActive } });
-            await _db.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             return UserAdministrationResult.Success(
                 model.IsActive ? "Account reactivated." : "Account deactivated.");
+            });
         }
 
         public async Task<UserAdministrationResult> UpdatePermissionsAsync(
             string actorUserId,
             UpdateRolePermissionsViewModel model)
         {
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrationTransactionAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -785,32 +777,21 @@ namespace ASI.Basecode.Services.Services
                 }
             }
 
-            await _db.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             return UserAdministrationResult.Success("Role permissions saved.");
+            });
         }
 
         private async Task<IDbContextTransaction> BeginAdministrationTransactionAsync()
         {
-            var transaction = await _db.Database.BeginTransactionAsync(
-                IsolationLevel.Serializable);
-            if (_db.Database.IsSqlServer())
-            {
-                await _db.Database.ExecuteSqlInterpolatedAsync(
-                    $@"DECLARE @lockResult int;
-EXEC @lockResult = sys.sp_getapplock
-    @Resource = {AdministrationLockName},
-    @LockMode = 'Exclusive',
-    @LockOwner = 'Transaction',
-    @LockTimeout = 15000;
-IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.', 1;");
-            }
-
-            return transaction;
+            return await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
         }
 
         private async Task<int> CountActiveAdministratorsAsync()
         {
+            // Lock the Administrator role row to serialize concurrent demotions/deactivations.
+            await RoleRowLock.LockAdministratorRowAsync(_db);
             return await (
                 from user in _db.Users
                 join userRole in _db.UserRoles on user.Id equals userRole.UserId
@@ -848,15 +829,7 @@ IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.
             string action,
             object details)
         {
-            _db.AdministrationAuditEvents.Add(new AdministrationAuditEvent
-            {
-                ActorUserId = actorUserId,
-                TargetUserId = targetUserId,
-                TargetRoleId = targetRoleId,
-                Action = action,
-                DetailsJson = JsonSerializer.Serialize(details),
-                OccurredAt = DateTime.UtcNow
-            });
+            _auditService.Stage(actorUserId, targetUserId, targetRoleId, action, details);
         }
 
         private static bool IsSupportedRole(string role) =>

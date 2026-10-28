@@ -301,7 +301,10 @@ namespace ASI.Basecode.WebApp.Data
                 }
             }
 
-            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            var strategy = dbContext.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await dbContext.Database.BeginTransactionAsync();
             var profile = await dbContext.BorrowerProfiles
                 .SingleOrDefaultAsync(item => item.UserId == user.Id);
             if (profile == null)
@@ -432,7 +435,8 @@ namespace ASI.Basecode.WebApp.Data
                 await dbContext.SaveChangesAsync();
             }
 
-            await transaction.CommitAsync();
+                await transaction.CommitAsync();
+            });
             logger.LogInformation(
                 "Development demo data is ready for {UserCode}. The demo account has Borrower, Custodian, and Administrator roles.",
                 user.UserCode);

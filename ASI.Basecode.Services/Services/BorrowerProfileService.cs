@@ -1,5 +1,7 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels;
 using ASI.Basecode.Services.Utilities;
@@ -33,16 +35,21 @@ namespace ASI.Basecode.Services.Services
         private const string EligibilityChangedAction = "BorrowerEligibilityChanged";
 
         private readonly AsiBasecodeDBContext _db;
+        private readonly IAuditService _auditService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public BorrowerProfileService(
-            AsiBasecodeDBContext db,
+            IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
+            IAuditService auditService,
             ILoggerFactory loggerFactory)
             : base(loggerFactory)
         {
-            _db = db;
+            _db = unitOfWork.Context;
+            _unitOfWork = unitOfWork;
             _userManager = userManager;
+            _auditService = auditService;
         }
 
         public async Task<BorrowerProfileListViewModel> GetBorrowerProfilesAsync(string search, int page)
@@ -53,7 +60,7 @@ namespace ASI.Basecode.Services.Services
             if (!string.IsNullOrEmpty(term))
             {
                 query = query.Where(profile =>
-                    profile.SchoolId.ToLower().Contains(term) ||
+                    profile.User.UserName.ToLower().Contains(term) ||
                     profile.Department.ToLower().Contains(term) ||
                     profile.User.FirstName.ToLower().Contains(term) ||
                     profile.User.LastName.ToLower().Contains(term));
@@ -63,8 +70,8 @@ namespace ASI.Basecode.Services.Services
             var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
             var currentPage = Math.Min(Math.Max(1, page), totalPages);
 
-            var borrowers = await Project(query)
-                .OrderBy(profile => profile.SchoolId)
+            var borrowers = await Project(query
+                    .OrderBy(profile => profile.User.UserName))
                 .Skip((currentPage - 1) * PageSize)
                 .Take(PageSize)
                 .ToListAsync();
@@ -103,8 +110,9 @@ namespace ASI.Basecode.Services.Services
                 return BorrowerProfileResult.Failure("Department is required.");
             }
 
-            // The authorization check runs inside the same serialized transaction as the write,
-            // so a permission revocation cannot land between the check and the commit.
+            // The authorization check runs inside the same transaction as the write.
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrativeWriteAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -162,6 +170,7 @@ namespace ASI.Basecode.Services.Services
             await RefreshSignInClaimsAsync(profile);
             await transaction.CommitAsync();
             return BorrowerProfileResult.Success("Borrower record updated successfully.");
+            });
         }
 
         public async Task<BorrowerProfileResult> UpdateEligibilityAsync(
@@ -169,6 +178,8 @@ namespace ASI.Basecode.Services.Services
             long id,
             bool isEligible)
         {
+            return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
             await using var transaction = await BeginAdministrativeWriteAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -221,6 +232,7 @@ namespace ASI.Basecode.Services.Services
                 isEligible
                     ? "Borrower marked as eligible."
                     : "Borrower marked as ineligible.");
+            });
         }
 
         private static IQueryable<BorrowerProfileViewModel> Project(
@@ -229,7 +241,7 @@ namespace ASI.Basecode.Services.Services
             return profiles.Select(profile => new BorrowerProfileViewModel
             {
                 BorrowerProfileId = profile.BorrowerProfileId,
-                SchoolId = profile.SchoolId,
+                SchoolId = profile.User.UserName,
                 BorrowerName = (profile.User.FirstName + " " + profile.User.LastName).Trim(),
                 Department = profile.Department,
                 ContactNumber = profile.ContactNumber,
@@ -284,26 +296,11 @@ namespace ASI.Basecode.Services.Services
         }
 
         /// <summary>
-        /// Opens a serializable transaction and, on SQL Server, takes the shared administrative
-        /// application lock. Permission changes take the same lock, so a revocation is either
-        /// visible to <see cref="CanManageAsync"/> or blocked until this write commits.
+        /// Opens a ReadCommitted transaction for administrative profile updates.
         /// </summary>
         private async Task<IDbContextTransaction> BeginAdministrativeWriteAsync()
         {
-            var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-            if (_db.Database.IsSqlServer())
-            {
-                await _db.Database.ExecuteSqlInterpolatedAsync(
-                    $@"DECLARE @lockResult int;
-EXEC @lockResult = sys.sp_getapplock
-    @Resource = {AdministrationLock.ResourceName},
-    @LockMode = 'Exclusive',
-    @LockOwner = 'Transaction',
-    @LockTimeout = 15000;
-IF @lockResult < 0 THROW 51000, 'Could not acquire the administrative write lock.', 1;");
-            }
-
-            return transaction;
+            return await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
         }
 
         /// <summary>
@@ -314,7 +311,7 @@ IF @lockResult < 0 THROW 51000, 'Could not acquire the administrative write lock
         {
             try
             {
-                await _db.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
                 return null;
             }
             catch (DbUpdateConcurrencyException)
@@ -334,14 +331,7 @@ IF @lockResult < 0 THROW 51000, 'Could not acquire the administrative write lock
 
         private void AddAudit(string actorUserId, string targetUserId, string action, object details)
         {
-            _db.AdministrationAuditEvents.Add(new AdministrationAuditEvent
-            {
-                ActorUserId = actorUserId,
-                TargetUserId = targetUserId,
-                Action = action,
-                DetailsJson = JsonSerializer.Serialize(details),
-                OccurredAt = DateTime.UtcNow
-            });
+            _auditService.Stage(actorUserId, targetUserId, action, details);
         }
 
         /// <summary>

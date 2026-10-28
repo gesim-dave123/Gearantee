@@ -1,5 +1,8 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Data.Repositories;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels.EquipmentItem;
 using ASI.Basecode.Services.Services;
@@ -316,6 +319,8 @@ namespace ASI.Basecode.Tests.Category
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<SqliteDashboardDbContext>()
                 .AddDefaultTokenProviders();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IEquipmentItemRepository, EquipmentItemRepository>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IEquipmentItemService, EquipmentItemService>();
             return services.BuildServiceProvider();
@@ -430,7 +435,6 @@ namespace ASI.Basecode.Tests.Category
             var profile = new BorrowerProfile
             {
                 UserId = borrower.Id,
-                SchoolId = "SCHOOL-" + Guid.NewGuid().ToString("N")[..8],
                 Department = "Testing",
                 IsEligible = true
             };

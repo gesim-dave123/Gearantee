@@ -1,5 +1,7 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels;
 using ASI.Basecode.Services.Services;
@@ -225,7 +227,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.Equal("0917-333-3333", stored.ContactNumber);
 
             // Everything the update form must never be able to reach.
-            Assert.Equal("S-300", stored.SchoolId);
+            Assert.Equal("S-300", seeded.User.UserName);
             Assert.Equal(seeded.User.Id, stored.UserId);
             Assert.True(stored.IsEligible);
             Assert.Equal(originalStamp, stored.CreatedAt);
@@ -382,7 +384,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.False(stored.IsEligible);
             Assert.Equal("College of Education", stored.Department);
             Assert.Equal("0917-500-5000", stored.ContactNumber);
-            Assert.Equal("S-500", stored.SchoolId);
+            Assert.Equal("S-500", seeded.User.UserName);
 
             result = await service.UpdateEligibilityAsync(admin.Id, seeded.Profile.BorrowerProfileId, true);
             Assert.True(result.Succeeded, result.Message);
@@ -822,7 +824,6 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             var profile = new BorrowerProfile
             {
                 UserId = user.Id,
-                SchoolId = schoolId,
                 Department = department,
                 ContactNumber = contactNumber,
                 IsEligible = isEligible,
@@ -924,14 +925,11 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             string firstName,
             string lastName)
         {
-            var suffix = Guid.NewGuid().ToString("N")[..8];
-            var account = (schoolId + "-" + suffix).Replace(" ", string.Empty);
-
             var user = new ApplicationUser
             {
-                UserName = account,
-                UserCode = account,
-                Email = account.ToLowerInvariant() + "@test.local",
+                UserName = schoolId,
+                UserCode = schoolId,
+                Email = schoolId.ToLowerInvariant() + "@test.local",
                 FirstName = firstName,
                 LastName = lastName,
                 IsActive = true,
@@ -956,10 +954,12 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
                     .AddInterceptors(provider.GetRequiredService<AuditFailureInterceptor>()));
             services.AddScoped<AsiBasecodeDBContext>(provider =>
                 provider.GetRequiredService<SqliteDashboardDbContext>());
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddIdentityCore<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<SqliteDashboardDbContext>()
                 .AddDefaultTokenProviders();
+            services.AddScoped<IAuditService, AuditService>();
             services.AddScoped<IBorrowerProfileService, BorrowerProfileService>();
             return services.BuildServiceProvider();
         }

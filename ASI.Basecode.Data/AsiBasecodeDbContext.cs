@@ -20,7 +20,6 @@ namespace ASI.Basecode.Data
 
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-        public DbSet<RolePermissionSeed> RolePermissionSeeds { get; set; }
         public DbSet<AdministrationAuditEvent> AdministrationAuditEvents { get; set; }
         public DbSet<BorrowerProfile> BorrowerProfiles { get; set; }
         public DbSet<EquipmentCategory> EquipmentCategories { get; set; }
@@ -33,6 +32,9 @@ namespace ASI.Basecode.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            // External login providers are not used, but user/role claims are read by the
+            // Identity claims factory on every sign-in and must stay mapped.
+            modelBuilder.Ignore<IdentityUserLogin<string>>();
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AsiBasecodeDBContext).Assembly);
         }
     }

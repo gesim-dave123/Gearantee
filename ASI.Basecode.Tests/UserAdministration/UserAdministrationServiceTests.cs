@@ -1,7 +1,9 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Tests.Dashboard;
-using ASI.Basecode.WebApp.Data;
+using ASI.Basecode.Data.Seeding;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels.UserAdministration;
 using ASI.Basecode.Services.Services;
@@ -292,10 +294,12 @@ namespace ASI.Basecode.Tests.UserAdministration
                 options.UseSqlite(database.Connection));
             services.AddScoped<AsiBasecodeDBContext>(provider =>
                 provider.GetRequiredService<SqliteDashboardDbContext>());
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddIdentityCore<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<SqliteDashboardDbContext>()
                 .AddDefaultTokenProviders();
+            services.AddScoped<IAuditService, AuditService>();
             services.AddScoped<IUserAdministrationService, UserAdministrationService>();
             return services.BuildServiceProvider();
         }

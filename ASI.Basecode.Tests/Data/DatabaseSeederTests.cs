@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -67,6 +68,42 @@ namespace ASI.Basecode.Tests.Data
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var users = await userManager.Users.ToListAsync();
             Assert.Empty(users);
+        }
+
+        [Fact]
+        public async Task SeedAsync_ReseedingDoesNotRestoreRemovedRolePermissions()
+        {
+            using var provider = CreateProvider();
+            var config = CreateConfiguration(new Dictionary<string, string>());
+
+            await DatabaseSeeder.SeedAsync(provider, config);
+
+            string custodianRoleId;
+            using (var scope = provider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+                var custodian = await db.Roles
+                    .SingleAsync(role => role.Name == DomainValues.Roles.Custodian);
+                custodianRoleId = custodian.Id;
+
+                var grants = await db.RolePermissions
+                    .Where(grant => grant.RoleId == custodianRoleId)
+                    .ToListAsync();
+                Assert.NotEmpty(grants);
+                db.RolePermissions.RemoveRange(grants);
+                await db.SaveChangesAsync();
+            }
+
+            // Re-running the seeder must treat the (now empty) role as already initialized.
+            await DatabaseSeeder.SeedAsync(provider, config);
+
+            using (var scope = provider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+                Assert.Empty(await db.RolePermissions
+                    .Where(grant => grant.RoleId == custodianRoleId)
+                    .ToListAsync());
+            }
         }
 
         [Theory]

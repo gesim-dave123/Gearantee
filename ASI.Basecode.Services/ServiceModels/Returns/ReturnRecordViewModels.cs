@@ -90,8 +90,6 @@ namespace ASI.Basecode.Services.ServiceModels.Returns
 
     public class ReturnRecordResult : Common.ServiceResult
     {
-        public new bool Succeeded { get; set; }
-        public new string Message { get; set; } = string.Empty;
         public long? ReturnRecordId { get; set; }
 
         // Controller returns 404
@@ -102,5 +100,13 @@ namespace ASI.Basecode.Services.ServiceModels.Returns
 
         public static ReturnRecordResult Missing() =>
             new ReturnRecordResult { NotFound = true, Message = "Loan not found." };
+
+        public static ReturnRecordResult Success(string message, long returnRecordId) =>
+            new ReturnRecordResult
+            {
+                Succeeded = true,
+                Message = message,
+                ReturnRecordId = returnRecordId
+            };
     }
 }

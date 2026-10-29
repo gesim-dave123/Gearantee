@@ -8,8 +8,6 @@ namespace ASI.Basecode.Services.ServiceModels.Reservations
     /// </summary>
     public class ReservationResult : ServiceResult
     {
-        public new bool Succeeded { get; set; }
-        public new string Message { get; set; } = string.Empty;
         public long? ReservationId { get; set; }
 
         /// <summary>True when the reservation doesn't exist or isn't the caller's; the controller returns 404.</summary>

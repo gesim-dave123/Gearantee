@@ -25,12 +25,28 @@ namespace ASI.Basecode.Data.Locks
             string resource,
             int timeoutMs = DefaultLockTimeoutMs)
         {
+            Acquire(resource, "Exclusive", timeoutMs);
+        }
+
+        /// <inheritdoc />
+        public void AcquireShared(
+            string resource,
+            int timeoutMs = DefaultLockTimeoutMs)
+        {
+            Acquire(resource, "Shared", timeoutMs);
+        }
+
+        private void Acquire(
+            string resource,
+            string lockMode,
+            int timeoutMs)
+        {
             EnsureSerializableTransaction();
             _db.Database.ExecuteSqlInterpolated(
                 $@"DECLARE @lockResult int;
 EXEC @lockResult = sys.sp_getapplock
     @Resource = {resource},
-    @LockMode = 'Exclusive',
+    @LockMode = {lockMode},
     @LockOwner = 'Transaction',
     @LockTimeout = {timeoutMs};
 IF @lockResult < 0 THROW 51000, 'Could not acquire the application lock.', 1;");

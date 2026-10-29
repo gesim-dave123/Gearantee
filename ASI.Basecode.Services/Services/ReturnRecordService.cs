@@ -1,5 +1,6 @@
 ﻿using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Data.Locks;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
@@ -30,6 +31,7 @@ namespace ASI.Basecode.Services.Services
         private readonly IReservationRepository _reservationRepository;
         private readonly IEquipmentItemRepository _equipmentItemRepository;
         private readonly TimeProvider _timeProvider;
+        private readonly IApplicationLockManager _applicationLocks;
 
         public ReturnRecordService(
             IUnitOfWork unitOfWork,
@@ -43,6 +45,7 @@ namespace ASI.Basecode.Services.Services
             _reservationRepository = reservationRepository;
             _equipmentItemRepository = equipmentItemRepository;
             _timeProvider = timeProvider;
+            _applicationLocks = new ApplicationLockManager(_db);
         }
 
         public ReturnRecordIndexViewModel GetReturnRecords(string tab, int page)
@@ -200,6 +203,15 @@ namespace ASI.Basecode.Services.Services
             DbUpdateException saveFailure = null;
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
+                // Take the administration lock in shared mode before the permission check.
+                // Permission/role changes take it exclusively, so a revocation either lands
+                // before this return is authorized or waits until it commits; it can never
+                // slip in between the check and the write.
+                if (_db.Database.IsSqlServer())
+                {
+                    _applicationLocks.AcquireShared(AdministrationLock.ResourceName);
+                }
+
                 if (!CanRecordReturns(userId))
                 {
                     return ReturnRecordResult.Fail(NoPermissionMessage);
@@ -239,14 +251,11 @@ namespace ASI.Basecode.Services.Services
                 ExceptionDispatchInfo.Capture(saveFailure).Throw();
             }
 
-            return new ReturnRecordResult
-            {
-                Succeeded = true,
-                ReturnRecordId = newReturnRecord.ReturnRecordId,
-                Message = daysLate > 0
+            return ReturnRecordResult.Success(
+                daysLate > 0
                     ? $"Return recorded. The item came back {daysLate} day{(daysLate == 1 ? "" : "s")} late, so a late return was logged."
-                    : "Return recorded."
-            };
+                    : "Return recorded.",
+                newReturnRecord.ReturnRecordId);
             });
         }
 

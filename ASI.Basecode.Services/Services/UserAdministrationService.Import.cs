@@ -15,8 +15,20 @@ namespace ASI.Basecode.Services.Services
     {
         public async Task<UserAdministrationResult> CreateAsync(string actorUserId, CreateUserViewModel model)
         {
+            // The Create Account form no longer collects a separate school ID: for borrowers it
+            // is derived from the user code, so seed it before validation runs. CSV import keeps
+            // its own school-ID requirement in ImportAsync.
+            if (model != null)
+            {
+                model.SchoolId = model.UserCode?.Trim();
+            }
+
             return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
+            // Rebuild state per attempt so a rolled-back attempt cannot leave stale tracked
+            // accounts behind for the retry.
+            _db.ChangeTracker.Clear();
+
             await using var transaction = await BeginAdministrationTransactionAsync();
             try
             {
@@ -54,6 +66,10 @@ namespace ASI.Basecode.Services.Services
 
             return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
+            // Rebuild state per attempt so a rolled-back attempt cannot leave stale tracked
+            // accounts behind for the retry.
+            _db.ChangeTracker.Clear();
+
             await using var transaction = await BeginAdministrationTransactionAsync();
             var currentRow = 0;
             try

@@ -212,6 +212,7 @@ namespace ASI.Basecode.Tests.Resilience
         {
             services.AddLogging();
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
+            services.AddScoped<IAuditService, AuditService>();
             services.AddDbContext<AsiBasecodeDBContext>(options => options
                 .UseSqlServer(_connectionString, sqlServerOptions => sqlServerOptions
                     .EnableRetryOnFailure(

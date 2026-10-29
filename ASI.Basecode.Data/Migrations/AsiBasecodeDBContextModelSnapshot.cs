@@ -602,6 +602,17 @@ namespace ASI.Basecode.Data.Migrations
                     b.ToTable("RolePermission", (string)null);
                 });
 
+            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("RolePermissionSeed", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -846,6 +857,15 @@ namespace ASI.Basecode.Data.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ASI.Basecode.Data.Models.RolePermissionSeed", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

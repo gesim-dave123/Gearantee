@@ -200,6 +200,10 @@ namespace ASI.Basecode.Services.Services
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
+            // Rebuild state per attempt: a rolled-back attempt can leave the tracked item or
+            // the new return record behind, which would corrupt the retry.
+            _db.ChangeTracker.Clear();
+
             DbUpdateException saveFailure = null;
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {

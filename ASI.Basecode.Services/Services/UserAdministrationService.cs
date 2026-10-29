@@ -42,6 +42,7 @@ namespace ASI.Basecode.Services.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IApplicationLockManager _applicationLocks;
         public UserAdministrationService(
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
@@ -53,6 +54,7 @@ namespace ASI.Basecode.Services.Services
             _userManager = userManager;
             _roleManager = roleManager;
             _auditService = auditService;
+            _applicationLocks = new ApplicationLockManager(_db);
         }
 
         public async Task<bool> CanManageAsync(string actorUserId)
@@ -213,7 +215,6 @@ namespace ASI.Basecode.Services.Services
                 Email = user.Email,
                 SelectedRoles = (await _userManager.GetRolesAsync(user)).ToList(),
                 AvailableRoles = await GetRolesAsync(),
-                SchoolId = user.BorrowerProfile != null ? user.UserCode : null,
                 Department = user.BorrowerProfile?.Department,
                 ContactNumber = user.BorrowerProfile?.ContactNumber,
                 BorrowerProfileConcurrencyStamp = user.BorrowerProfile?.ConcurrencyStamp,
@@ -297,12 +298,13 @@ namespace ASI.Basecode.Services.Services
                     "An account with that email or user code already exists.");
             }
 
+            // The borrower school ID is derived from the account's user code, so only the
+            // department is entered here; a posted SchoolId is never trusted or persisted.
             if (role.Name == DomainValues.Roles.Borrower &&
-                (string.IsNullOrWhiteSpace(model.SchoolId) ||
-                 string.IsNullOrWhiteSpace(model.Department)))
+                string.IsNullOrWhiteSpace(model.Department))
             {
                 return UserAdministrationResult.Failure(
-                    "Borrower accounts need a school ID and department.");
+                    "Borrower accounts need a department.");
             }
 
             var user = new ApplicationUser
@@ -433,13 +435,14 @@ namespace ASI.Basecode.Services.Services
 
             var needsBorrowerProfile = selectedRoles.Contains(
                 DomainValues.Roles.Borrower, StringComparer.OrdinalIgnoreCase);
+            // The school ID is derived from the user code and cannot be edited here, so it
+            // is neither required from nor persisted from the submitted form.
             if (needsBorrowerProfile &&
-                (string.IsNullOrWhiteSpace(model.SchoolId) ||
-                 string.IsNullOrWhiteSpace(model.Department)))
+                string.IsNullOrWhiteSpace(model.Department))
             {
                 await transaction.RollbackAsync();
                 return UserAdministrationResult.Failure(
-                    "Accounts with the Borrower role need a school ID and department.");
+                    "Accounts with the Borrower role need a department.");
             }
 
             var profile = await _db.BorrowerProfiles
@@ -783,9 +786,20 @@ namespace ASI.Basecode.Services.Services
             });
         }
 
+        /// <summary>
+        /// Opens a serializable transaction and, on SQL Server, takes the exclusive administrative
+        /// application lock. Borrower-profile writes take the same lock, so a revocation cannot
+        /// land between their authorization check and their commit.
+        /// </summary>
         private async Task<IDbContextTransaction> BeginAdministrationTransactionAsync()
         {
-            return await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            if (_db.Database.IsSqlServer())
+            {
+                _applicationLocks.AcquireExclusive(AdministrationLockName);
+            }
+
+            return transaction;
         }
 
         private async Task<int> CountActiveAdministratorsAsync()

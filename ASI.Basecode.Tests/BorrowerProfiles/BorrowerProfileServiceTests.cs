@@ -805,6 +805,45 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
                 validateAllProperties: true));
         }
 
+        [Fact]
+        public async Task UpdateEligibilityAsync_AfterUncommittedSaveOnSharedContext_PersistsThroughFreshContext()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+            var admin = await SeedAuthorizedAdministratorAsync(scope);
+            var seeded = await SeedProfileAsync(
+                scope, "S-950", "Ivy", "Lopez", "Science", null, isEligible: true);
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            // Simulate an attempt that saved IsEligible=false but never committed: the shared
+            // context keeps the uncommitted value tracked, like a retried transaction.
+            await using (var failedAttempt = await db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable))
+            {
+                var tracked = await db.BorrowerProfiles.SingleAsync(
+                    item => item.BorrowerProfileId == seeded.Profile.BorrowerProfileId);
+                tracked.IsEligible = false;
+                await db.SaveChangesAsync();
+                await failedAttempt.RollbackAsync();
+            }
+
+            Assert.Contains(
+                db.ChangeTracker.Entries<BorrowerProfile>(),
+                entry => !entry.Entity.IsEligible);
+
+            var result = await service.UpdateEligibilityAsync(
+                admin.Id, seeded.Profile.BorrowerProfileId, isEligible: false);
+
+            Assert.True(result.Succeeded, result.Message);
+            // The retry must rebuild state and write the value; it must not trust the stale
+            // tracked IsEligible=false and report success without touching the database.
+            using var verify = database.Create();
+            Assert.False((await verify.BorrowerProfiles.AsNoTracking()
+                .SingleAsync(item => item.BorrowerProfileId == seeded.Profile.BorrowerProfileId)).IsEligible);
+        }
+
         // --------------------------------------------------------------- helpers
 
         private static async Task<(ApplicationUser User, BorrowerProfile Profile)> SeedProfileAsync(

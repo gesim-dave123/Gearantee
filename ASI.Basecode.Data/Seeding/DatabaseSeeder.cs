@@ -119,7 +119,7 @@ namespace ASI.Basecode.Data.Seeding
             foreach (var roleEntry in RolePermissions)
             {
                 var role = await roleManager.FindByNameAsync(roleEntry.Key);
-                var defaultsWereSeeded = await dbContext.RolePermissions
+                var defaultsWereSeeded = await dbContext.RolePermissionSeeds
                     .AnyAsync(seed => seed.RoleId == role.Id);
                 if (defaultsWereSeeded)
                 {
@@ -133,15 +133,20 @@ namespace ASI.Basecode.Data.Seeding
                     var exists = await dbContext.RolePermissions.AnyAsync(x =>
                         x.RoleId == role.Id &&
                         x.PermissionId == permissionId);
-                if (!exists)
-                {
-                    dbContext.RolePermissions.Add(new RolePermission
+                    if (!exists)
                     {
-                        RoleId = role.Id,
-                        PermissionId = permissionId
-                    });
+                        dbContext.RolePermissions.Add(new RolePermission
+                        {
+                            RoleId = role.Id,
+                            PermissionId = permissionId
+                        });
+                    }
                 }
-            }
+
+                dbContext.RolePermissionSeeds.Add(new RolePermissionSeed
+                {
+                    RoleId = role.Id
+                });
             }
 
             await dbContext.SaveChangesAsync();

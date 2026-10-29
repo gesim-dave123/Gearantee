@@ -194,12 +194,9 @@ namespace ASI.Basecode.Services.Services
                     transaction.Commit();
                 }
 
-                return new ReservationResult
-                {
-                    Succeeded = true,
-                    Message = "Reservation request submitted. A custodian will review it.",
-                    ReservationId = newReservation.ReservationId
-                };
+                return ReservationResult.Success(
+                    "Reservation request submitted. A custodian will review it.",
+                    newReservation.ReservationId);
             });
         }
 
@@ -352,12 +349,7 @@ namespace ASI.Basecode.Services.Services
                 return ReservationResult.Fail("This reservation changed while you were cancelling it. Reload the page to see its current status.");
             }
 
-            return new ReservationResult
-            {
-                Succeeded = true,
-                Message = "Reservation cancelled.",
-                ReservationId = reservationId
-            };
+            return ReservationResult.Success("Reservation cancelled.", reservationId);
         }
 
         public ReservationReviewIndexViewModel GetReviewQueue(string status, string search, int page)

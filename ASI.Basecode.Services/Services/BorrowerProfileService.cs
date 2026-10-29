@@ -116,6 +116,11 @@ namespace ASI.Basecode.Services.Services
             // The authorization check runs inside the same transaction as the write.
             return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
+            // Rebuild state on every attempt: a failed attempt can leave uncommitted values
+            // tracked, which would make the retry report a stale/unchanged result instead of
+            // reading the committed row.
+            _db.ChangeTracker.Clear();
+
             await using var transaction = await BeginAdministrativeWriteAsync();
             if (!await CanManageAsync(actorUserId))
             {
@@ -183,6 +188,11 @@ namespace ASI.Basecode.Services.Services
         {
             return await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
+            // Rebuild state on every attempt: if an earlier attempt saved IsEligible but failed
+            // to commit, the cached value would otherwise make the retry report "already marked"
+            // without persisting the change.
+            _db.ChangeTracker.Clear();
+
             await using var transaction = await BeginAdministrativeWriteAsync();
             if (!await CanManageAsync(actorUserId))
             {

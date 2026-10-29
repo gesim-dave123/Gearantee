@@ -99,15 +99,15 @@ The domain core of the application. Responsible for enforcing all business rules
 #### Purpose
 Responsible solely for database communication, entity-relationship mapping via EF Core, database migrations, database-level locking, and canonical database seeding.
 
-#### Database Tables & Entity Mapping (18 Total Tables)
-The SQL Server database contains **18 physical tables**, split into two categories:
-1. **7 ASP.NET Core Identity Tables** (inherited from `IdentityDbContext`):
+#### Database Tables & Entity Mapping (17 Total Tables)
+The SQL Server database contains **17 physical tables**, split into two categories:
+1. **6 ASP.NET Core Identity Tables** (inherited from `IdentityDbContext`):
    - `AspNetUsers` (mapped to custom `ApplicationUser.cs`)
    - `AspNetRoles` (mapped to `IdentityRole`)
    - `AspNetUserRoles` (join table for user-role assignments)
    - `AspNetUserClaims`, `AspNetRoleClaims` (identity claims)
-   - `AspNetUserLogins` (external login providers)
    - `AspNetUserTokens` (stores password reset OTP hashes)
+   - **Removed:** `AspNetUserLogins` is no longer mapped (`IdentityUserLogin` is ignored) and was dropped by the `NormalizeUserAndBorrowerSchema` migration because external login providers are not used.
 2. **11 Custom Domain Entity Tables** (explicit `DbSet<T>` in `AsiBasecodeDbContext`):
    - `EquipmentCategory` (`EquipmentCategory.cs`)
    - `EquipmentItem` (`EquipmentItem.cs`)

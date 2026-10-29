@@ -1,5 +1,6 @@
 ﻿using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Data.Locks;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.Services.Interfaces;
@@ -38,6 +39,7 @@ namespace ASI.Basecode.Services.Services
         private readonly IAuditService _auditService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IApplicationLockManager _applicationLocks;
 
         public BorrowerProfileService(
             IUnitOfWork unitOfWork,
@@ -50,6 +52,7 @@ namespace ASI.Basecode.Services.Services
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _auditService = auditService;
+            _applicationLocks = new ApplicationLockManager(_db);
         }
 
         public async Task<BorrowerProfileListViewModel> GetBorrowerProfilesAsync(string search, int page)
@@ -296,11 +299,21 @@ namespace ASI.Basecode.Services.Services
         }
 
         /// <summary>
-        /// Opens a ReadCommitted transaction for administrative profile updates.
+        /// Opens a serializable transaction and, on SQL Server, takes the exclusive administrative
+        /// application lock. Permission, role, and account changes take the same lock, so a
+        /// revocation is either visible to <see cref="CanManageAsync"/> or blocked until this
+        /// write commits. Without the lock an administrator could be deactivated or demoted
+        /// between the authorization check and the commit.
         /// </summary>
         private async Task<IDbContextTransaction> BeginAdministrativeWriteAsync()
         {
-            return await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            if (_db.Database.IsSqlServer())
+            {
+                _applicationLocks.AcquireExclusive(AdministrationLock.ResourceName);
+            }
+
+            return transaction;
         }
 
         /// <summary>

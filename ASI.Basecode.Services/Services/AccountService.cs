@@ -55,6 +55,10 @@ namespace ASI.Basecode.Services.Services
             return await _db.Database.CreateExecutionStrategy()
                 .ExecuteAsync(async () =>
             {
+                // Rebuild state per attempt so a rolled-back attempt cannot leave a duplicate
+                // tracked user/profile behind for the retry.
+                _db.ChangeTracker.Clear();
+
                 await using var transaction =
                     await _db.Database.BeginTransactionAsync();
 

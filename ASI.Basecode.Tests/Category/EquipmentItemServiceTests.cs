@@ -291,6 +291,44 @@ namespace ASI.Basecode.Tests.Category
         }
 
         [Fact]
+        public async Task SetArchivedAsync_AfterUncommittedSaveOnSharedContext_PersistsThroughFreshContext()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+            var admin = await SetupAuthorizedAdminAsync(scope);
+            var category = await CreateCategoryAsync(db);
+            var item = await CreateEquipmentAsync(db, category.CategoryId);
+            var service = scope.ServiceProvider.GetRequiredService<IEquipmentItemService>();
+
+            // Simulate an attempt that saved IsArchived=true but never committed. The shared
+            // DbContext keeps that uncommitted value tracked, exactly like a retried transaction.
+            await using (var failedAttempt = await db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable))
+            {
+                var tracked = await db.EquipmentItems
+                    .SingleAsync(row => row.EquipmentId == item.EquipmentId);
+                tracked.IsArchived = true;
+                await db.SaveChangesAsync();
+                await failedAttempt.RollbackAsync();
+            }
+
+            Assert.Contains(
+                db.ChangeTracker.Entries<EquipmentItem>(),
+                entry => entry.Entity.IsArchived);
+
+            var result = await service.SetArchivedAsync(admin.Id, item.EquipmentId, true);
+
+            Assert.True(result.Succeeded, result.Message);
+            // The retry must rebuild state and write the value; it must not trust the stale
+            // tracked IsArchived=true and report success without touching the database.
+            using var verify = database.Create();
+            Assert.True((await verify.EquipmentItems.AsNoTracking()
+                .SingleAsync(row => row.EquipmentId == item.EquipmentId)).IsArchived);
+        }
+
+        [Fact]
         public async Task CreateAsync_WithoutEquipmentManagePermission_IsForbidden()
         {
             using var database = new SqliteDb();

@@ -142,6 +142,10 @@ namespace ASI.Basecode.Services.Services
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
+                // Rebuild state per attempt so a rolled-back submit cannot reuse a tracked
+                // reservation/item and misreport the result.
+                _db.ChangeTracker.Clear();
+
                 // Inventory changes and reservation submissions acquire the equipment row lock
                 // first. All reservation checks and the insert stay inside that serializable
                 // boundary, so a concurrent archive/status change cannot invalidate an earlier
@@ -454,6 +458,9 @@ namespace ASI.Basecode.Services.Services
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
+            // Rebuild state per attempt so a rolled-back approval cannot reuse tracked state.
+            _db.ChangeTracker.Clear();
+
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
                 if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
@@ -579,6 +586,9 @@ namespace ASI.Basecode.Services.Services
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
+            // Rebuild state per attempt so a rolled-back rejection cannot reuse tracked state.
+            _db.ChangeTracker.Clear();
+
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
                 if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
@@ -655,6 +665,9 @@ namespace ASI.Basecode.Services.Services
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
+            // Rebuild state per attempt so a rolled-back release cannot reuse tracked state.
+            _db.ChangeTracker.Clear();
+
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
                 if (!CanReview(actorUserId, DomainValues.Permissions.TransactionReleaseReturn))

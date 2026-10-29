@@ -13,8 +13,9 @@ namespace ASI.Basecode.Data.Migrations
             migrationBuilder.DropTable(
                 name: "AspNetUserLogins");
 
-            migrationBuilder.DropTable(
-                name: "RolePermissionSeed");
+            // RolePermissionSeed is deliberately retained: it records which roles have already
+            // been initialized, so dropping it would make a later --seed run restore grants an
+            // administrator intentionally removed (including roles left with zero grants).
 
             // SchoolId is replaced by the account identifier (AspNetUsers.UserName, exposed as
             // IdNumber). Dropping the column is only lossless when every borrower's SchoolId
@@ -74,23 +75,6 @@ namespace ASI.Basecode.Data.Migrations
                         name: "FK_AspNetUserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RolePermissionSeed",
-                columns: table => new
-                {
-                    RoleId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RolePermissionSeed", x => x.RoleId);
-                    table.ForeignKey(
-                        name: "FK_RolePermissionSeed_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });

@@ -93,7 +93,7 @@ If your local `GearanteeDev` was created before the backend architecture refacto
 
 - Drops the `BorrowerProfile.SchoolId` column (borrower identity now lives only in `AspNetUsers.UserName`, exposed as `IdNumber`)
 - Drops the unused `AspNetUserLogins` table
-- Preserves the `RolePermissionSeed` table: the follow-up `RestoreRolePermissionSeed` migration recreates it so role-initialization markers survive and reseeding never restores revoked grants
+- Retains the `RolePermissionSeed` table (it is no longer dropped): the initialization markers survive the upgrade, including roles left with zero grants, so reseeding never restores revoked grants
 
 **Warning:** dropping `SchoolId` is destructive. The migration stops with an error if any borrower's `SchoolId` differs from the linked account identifier (`AspNetUsers.UserName`) or a profile has no linked account; reconcile those rows first (the error message includes the inspection query). Otherwise any values stored in `BorrowerProfile.SchoolId` are permanently deleted. Registration and administration code now derives the borrower's displayed school ID from the account's user code, so no backfill is needed once the identifiers match. Apply this migration **before** running the updated application: new borrower-profile inserts omit the old required `SchoolId` column, so leaving the schema unmigrated causes those writes to fail.
 

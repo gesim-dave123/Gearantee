@@ -15,8 +15,11 @@ using ASI.Basecode.Tests.UserAdministration;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -162,6 +165,71 @@ namespace ASI.Basecode.Tests.Resilience
             Assert.False(check.BorrowerProfiles.Single().IsEligible);
         }
 
+        [SqlServerFact]
+        public async Task SqlServer_reservation_submit_retry_after_rollback_inserts_once()
+        {
+            await using var environment = await RetryEnvironment.CreateAsync(failFirstCommit: true);
+            string borrowerId;
+            long itemId;
+            using (var db = environment.NewSeedingContext())
+            {
+                var user = User(db, "BRW-1");
+                Profile(db, user);
+                borrowerId = user.Id;
+                itemId = Item(db, "ITEM-1").EquipmentId;
+            }
+
+            var request = new ReservationCreateViewModel
+            {
+                EquipmentId = itemId,
+                ReservationStart = ManilaClock.ToLocal(Now.AddDays(1)),
+                ReservationEnd = ManilaClock.ToLocal(Now.AddDays(1).AddHours(3)),
+                Purpose = "Thesis defense"
+            };
+
+            var result = await environment.With<ReservationService, ReservationResult>(
+                service => Task.Run(() => service.SubmitReservation(request, borrowerId)));
+
+            Assert.True(result.Succeeded, result.Message);
+            using var check = environment.NewSeedingContext();
+            Assert.Single(check.Reservations);
+        }
+
+        [SqlServerFact]
+        public async Task SqlServer_return_record_retry_after_rollback_inserts_once()
+        {
+            await using var environment = await RetryEnvironment.CreateAsync(failFirstCommit: true);
+            long releaseRecordId;
+            using (var db = environment.NewSeedingContext())
+            {
+                var user = User(db, "BRW-1");
+                var profile = Profile(db, user);
+                var item = Item(db, "ITEM-1", DomainValues.EquipmentStatuses.Borrowed);
+                var reservation = Reservation(db, profile, item,
+                    Now.AddDays(-3), Now.AddDays(-1),
+                    DomainValues.ReservationStatuses.Approved, Now.AddDays(-3));
+                releaseRecordId = Release(db, reservation, Now.AddDays(-3).AddHours(1)).ReleaseRecordId;
+            }
+
+            var actorId = environment.ActorId;
+            var model = new ReturnRecordViewModel
+            {
+                ReleaseRecordId = releaseRecordId,
+                ReturnedCondition = DomainValues.ReturnConditions.Good,
+                ResultingItemStatus = DomainValues.EquipmentStatuses.Available,
+                ActualReturnAt = ManilaClock.ToLocal(Now),
+                Notes = "Back from the field trip"
+            };
+
+            var result = await environment.With<ReturnRecordService, ReturnRecordResult>(
+                service => Task.Run(() => service.AddReturnRecord(model, actorId)));
+
+            Assert.True(result.Succeeded, result.Message);
+            using var check = environment.NewSeedingContext();
+            Assert.Single(check.ReturnRecords);
+            Assert.Single(check.LateReturns);
+        }
+
         // TODO: once UserAdministrationService.UpdateAsync/SetActiveAsync/CreateAsync/ImportAsync
         // are wrapped, extend RetryEnvironment with the identity builders they need and add a
         // matching test; AccountController.Register needs an MVC integration harness.
@@ -177,19 +245,21 @@ namespace ASI.Basecode.Tests.Resilience
         private static readonly DateTime Now = Utc(2026, 10, 7, 0);
 
         private readonly string _connectionString;
+        private readonly bool _failFirstCommit;
         private ServiceProvider _provider;
 
-        private RetryEnvironment()
+        private RetryEnvironment(bool failFirstCommit)
         {
             _connectionString = @"Server=(localdb)\MSSQLLocalDB;Database=Gearantee_Retry_Test_" +
                 Guid.NewGuid().ToString("N") + ";Trusted_Connection=True;TrustServerCertificate=True";
+            _failFirstCommit = failFirstCommit;
         }
 
         public string ActorId { get; private set; }
 
-        public static async Task<RetryEnvironment> CreateAsync()
+        public static async Task<RetryEnvironment> CreateAsync(bool failFirstCommit = false)
         {
-            var environment = new RetryEnvironment();
+            var environment = new RetryEnvironment(failFirstCommit);
             var services = new ServiceCollection();
             environment.ConfigureServices(services);
             environment._provider = services.BuildServiceProvider();
@@ -213,12 +283,29 @@ namespace ASI.Basecode.Tests.Resilience
             services.AddLogging();
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.AddScoped<IAuditService, AuditService>();
-            services.AddDbContext<AsiBasecodeDBContext>(options => options
-                .UseSqlServer(_connectionString, sqlServerOptions => sqlServerOptions
-                    .EnableRetryOnFailure(
+            services.AddDbContext<AsiBasecodeDBContext>(options =>
+            {
+                options.UseSqlServer(_connectionString, sqlServerOptions =>
+                {
+                    sqlServerOptions.EnableRetryOnFailure(
                         maxRetryCount: 5,
                         maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null)));
+                        errorNumbersToAdd: null);
+
+                    if (_failFirstCommit)
+                    {
+                        // Force exactly one retry so a rolled-back insert replays the
+                        // execution strategy with the same context and entity instances.
+                        sqlServerOptions.ExecutionStrategy(
+                            dependencies => new ForcedRetryExecutionStrategy(dependencies));
+                    }
+                });
+
+                if (_failFirstCommit)
+                {
+                    options.AddInterceptors(new FailFirstCommitInterceptor());
+                }
+            });
             services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<AsiBasecodeDBContext>().AddDefaultTokenProviders();
 
@@ -313,5 +400,46 @@ namespace ASI.Basecode.Tests.Resilience
             await db.Database.EnsureDeletedAsync();
             await _provider.DisposeAsync();
         }
+    }
+
+    /// <summary>
+    /// Throws once immediately before the first transaction commit. The commit never reaches the
+    /// database, so the transaction rolls back, but the insert already executed and the entity
+    /// keeps its database-generated ID. This reproduces the "rolled-back insert" the retry
+    /// execution strategy must survive.
+    /// </summary>
+    internal sealed class FailFirstCommitInterceptor : DbTransactionInterceptor
+    {
+        private int _commits;
+
+        public override InterceptionResult TransactionCommitting(
+            DbTransaction transaction,
+            TransactionEventData eventData,
+            InterceptionResult result)
+        {
+            if (_commits++ == 0)
+            {
+                throw new InjectedCommitFailureException();
+            }
+
+            return base.TransactionCommitting(transaction, eventData, result);
+        }
+    }
+
+    internal sealed class InjectedCommitFailureException : Exception
+    {
+    }
+
+    /// <summary>Retries the operation exactly once so an injected commit failure exercises the retry path.</summary>
+    internal sealed class ForcedRetryExecutionStrategy : ExecutionStrategy
+    {
+        private int _retries;
+
+        public ForcedRetryExecutionStrategy(ExecutionStrategyDependencies dependencies)
+            : base(dependencies, maxRetryCount: 1, maxRetryDelay: TimeSpan.FromMilliseconds(10))
+        {
+        }
+
+        protected override bool ShouldRetryOn(Exception exception) => _retries++ < 1;
     }
 }

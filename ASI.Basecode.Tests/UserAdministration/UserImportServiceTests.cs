@@ -220,10 +220,13 @@ namespace ASI.Basecode.Tests.UserAdministration
             var result = await service.SetActiveAsync(environment.ActorId, new SetAccountActiveViewModel
                 { UserId = target.Id, ConcurrencyStamp = concurrency, IsActive = active });
             Assert.True(result.Succeeded);
-            await db.Entry(target).ReloadAsync();
-            Assert.Equal(stamp, target.SecurityStamp);
-            Assert.Equal(concurrency, target.ConcurrencyStamp);
-            Assert.Equal(updatedAt, target.UpdatedAt);
+            // The service clears the change tracker per attempt, so the earlier "target"
+            // instance is detached. Re-read committed state instead of reloading it.
+            var reloaded = await db.Users.AsNoTracking()
+                .SingleAsync(user => user.Id == target.Id);
+            Assert.Equal(stamp, reloaded.SecurityStamp);
+            Assert.Equal(concurrency, reloaded.ConcurrencyStamp);
+            Assert.Equal(updatedAt, reloaded.UpdatedAt);
             Assert.Equal(audits, await db.AdministrationAuditEvents.CountAsync());
         }
 
@@ -244,9 +247,12 @@ namespace ASI.Basecode.Tests.UserAdministration
             var model = await service.GetUserAsync(environment.ActorId, other.Id);
             model.SelectedRoles = new List<string> { "Custodian" };
             Assert.True((await service.UpdateAsync(environment.ActorId, model)).Succeeded);
-            Assert.False(await users.IsInRoleAsync(other, "Administrator"));
-            Assert.Equal(active, other.IsActive);
-            Assert.NotEqual(oldSecurityStamp, other.SecurityStamp);
+            // The service clears the change tracker per attempt, so the earlier "other"
+            // instance is detached. Re-read committed state before asserting the rotation.
+            var reloaded = await users.FindByIdAsync(other.Id);
+            Assert.False(await users.IsInRoleAsync(reloaded, "Administrator"));
+            Assert.Equal(active, reloaded.IsActive);
+            Assert.NotEqual(oldSecurityStamp, reloaded.SecurityStamp);
             var actorModel = await service.GetUserAsync(environment.ActorId, environment.ActorId);
             actorModel.SelectedRoles = new List<string> { "Custodian" };
             Assert.False((await service.UpdateAsync(environment.ActorId, actorModel)).Succeeded);

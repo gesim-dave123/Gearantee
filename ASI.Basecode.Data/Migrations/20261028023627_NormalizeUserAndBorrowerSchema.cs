@@ -16,6 +16,19 @@ namespace ASI.Basecode.Data.Migrations
             migrationBuilder.DropTable(
                 name: "RolePermissionSeed");
 
+            // SchoolId is replaced by the account identifier (AspNetUsers.UserName, exposed as
+            // IdNumber). Dropping the column is only lossless when every borrower's SchoolId
+            // already matches the linked account. If any differ (or a profile has no account),
+            // stop and let an operator reconcile the values instead of silently deleting them.
+            migrationBuilder.Sql(
+                "IF EXISTS (" +
+                "    SELECT 1 FROM [BorrowerProfile] AS profile " +
+                "    LEFT JOIN [AspNetUsers] AS account ON account.[Id] = profile.[UserId] " +
+                "    WHERE account.[Id] IS NULL OR profile.[SchoolId] <> account.[UserName]) " +
+                "BEGIN " +
+                "    THROW 51000, 'NormalizeUserAndBorrowerSchema stopped: one or more BorrowerProfile.SchoolId values differ from the linked account identifier (AspNetUsers.UserName), or a profile has no linked account. Dropping SchoolId would lose data. Inspect and reconcile those rows first, for example: SELECT profile.BorrowerProfileId, profile.SchoolId, account.UserName FROM BorrowerProfile AS profile LEFT JOIN AspNetUsers AS account ON account.Id = profile.UserId WHERE account.Id IS NULL OR profile.SchoolId <> account.UserName;', 1; " +
+                "END;");
+
             migrationBuilder.DropIndex(
                 name: "IX_BorrowerProfile_SchoolId",
                 table: "BorrowerProfile");
@@ -35,6 +48,15 @@ namespace ASI.Basecode.Data.Migrations
                 maxLength: 100,
                 nullable: false,
                 defaultValue: "");
+
+            // The original values were dropped by Up(), so restore a distinct, meaningful
+            // identifier for every borrower before the unique index is recreated. The linked
+            // account identifier (UserName) is unique per profile, so it satisfies the index.
+            migrationBuilder.Sql(
+                "UPDATE profile " +
+                "SET profile.SchoolId = account.UserName " +
+                "FROM BorrowerProfile AS profile " +
+                "JOIN AspNetUsers AS account ON account.Id = profile.UserId;");
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserLogins",

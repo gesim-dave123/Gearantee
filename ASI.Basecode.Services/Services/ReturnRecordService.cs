@@ -172,6 +172,17 @@ namespace ASI.Basecode.Services.Services
                 return ReturnRecordResult.Fail($"This return is dated more than {ReturnInspection.BackdateGraceMinutes} minutes ago. Add an inspection note explaining why it's being recorded late.");
             }
 
+            // Lock order: equipment item row lock; no ReturnRecord range read here (avoids deadlocks)
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return strategy.Execute(() =>
+            {
+            // Rebuild state per attempt: a rolled-back attempt can leave the tracked item or
+            // the new return record behind, which would corrupt the retry.
+            _db.ChangeTracker.Clear();
+
+            // Build a fresh return record (and its late-return child) on every attempt. A
+            // rolled-back insert keeps its database-generated ID, so reusing the object would
+            // replay it as an explicit identity insert on retry.
             var newReturnRecord = new ReturnRecord
             {
                 ReleaseRecordId = model.ReleaseRecordId,
@@ -195,14 +206,6 @@ namespace ASI.Basecode.Services.Services
                     CreatedAt = nowUtc
                 };
             }
-
-            // Lock order: equipment item row lock; no ReturnRecord range read here (avoids deadlocks)
-            var strategy = _db.Database.CreateExecutionStrategy();
-            return strategy.Execute(() =>
-            {
-            // Rebuild state per attempt: a rolled-back attempt can leave the tracked item or
-            // the new return record behind, which would corrupt the retry.
-            _db.ChangeTracker.Clear();
 
             DbUpdateException saveFailure = null;
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))

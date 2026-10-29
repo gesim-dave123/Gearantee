@@ -126,25 +126,28 @@ namespace ASI.Basecode.Services.Services
 
             var profileId = profile.BorrowerProfileId;
 
-            var newReservation = new Reservation
-            {
-                BorrowerProfileId = profileId,
-                EquipmentId = model.EquipmentId,
-                ReservationStart = startUtc,
-                ReservationEnd = endUtc,
-                Purpose = purpose,
-                Status = DomainValues.ReservationStatuses.Pending,
-                RequestedAt = nowUtc,
-                CreatedAt = nowUtc,
-                UpdatedAt = nowUtc
-            };
-
             var strategy = _db.Database.CreateExecutionStrategy();
             return strategy.Execute(() =>
             {
                 // Rebuild state per attempt so a rolled-back submit cannot reuse a tracked
                 // reservation/item and misreport the result.
                 _db.ChangeTracker.Clear();
+
+                // Build a fresh reservation on every attempt. A rolled-back insert keeps its
+                // database-generated ID, so reusing the object would replay it as an explicit
+                // identity insert on retry.
+                var newReservation = new Reservation
+                {
+                    BorrowerProfileId = profileId,
+                    EquipmentId = model.EquipmentId,
+                    ReservationStart = startUtc,
+                    ReservationEnd = endUtc,
+                    Purpose = purpose,
+                    Status = DomainValues.ReservationStatuses.Pending,
+                    RequestedAt = nowUtc,
+                    CreatedAt = nowUtc,
+                    UpdatedAt = nowUtc
+                };
 
                 // Inventory changes and reservation submissions acquire the equipment row lock
                 // first. All reservation checks and the insert stay inside that serializable

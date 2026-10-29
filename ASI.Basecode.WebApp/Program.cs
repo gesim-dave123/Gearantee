@@ -1,12 +1,13 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
 using ASI.Basecode.WebApp;
-using ASI.Basecode.WebApp.Data;
+using ASI.Basecode.Data.Seeding;
 using ASI.Basecode.WebApp.Extensions.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
@@ -41,6 +42,19 @@ if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
     await DatabaseSeeder.SeedAsync(
         app.Services,
         app.Configuration);
+    return;
+}
+
+if (args.Contains("--seed-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "The --seed-demo command is available only in Development.");
+    }
+
+    await DatabaseSeeder.SeedAsync(app.Services, app.Configuration);
+    await DatabaseSeeder.SeedDemoAsync(app.Services, app.Configuration);
     return;
 }
 

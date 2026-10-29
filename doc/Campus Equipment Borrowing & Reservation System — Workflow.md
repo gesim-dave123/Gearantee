@@ -22,7 +22,7 @@ flowchart TD
 
 ### Password Reset
 
-The system uses **ASP.NET Core Identity** for password recovery.
+The system uses **ASP.NET Core Identity** for password recovery and Brevo for OTP delivery.
 
 ```mermaid
 flowchart TD
@@ -30,19 +30,20 @@ flowchart TD
     B --> C{Email Exists?}
 
     C -->|No| D[Display Generic Response]
-    C -->|Yes| E[ASP.NET Core Identity Generates Reset Token]
+    C -->|Yes| E[Generate and hash six-digit OTP]
 
-    E --> F[Send Password Reset URL]
-    F --> G[User Opens Reset URL]
-    G --> H{Token Valid?}
+    E --> F[Send OTP through Brevo]
+    F --> G[User enters OTP]
+    G --> H{OTP valid and within limits?}
 
-    H -->|No| I[Display Expired or Invalid Link]
-    H -->|Yes| J[Enter New Password]
+    H -->|No| I[Display Generic Error]
+    H -->|Yes| J[Consume OTP and create Identity reset token]
 
-    J --> K[Validate Password]
-    K -->|Invalid| J
-    K -->|Valid| L[Update Password]
-    L --> M[Password Reset Complete]
+    J --> K[Enter New Password]
+    K --> L[Validate Password]
+    L -->|Invalid| K
+    L -->|Valid| M[Update Password]
+    M --> N[Password Reset Complete]
 ```
 
 > **Database Note:** No custom `PASSWORD_RESET`, `OTP_CODE`, or `PASSWORD_RESET_TOKEN` table is required. The reset process is handled by ASP.NET Core Identity.
@@ -333,7 +334,7 @@ flowchart TD
     K -->|Yes| M[Generate Borrowing Report]
 ```
 
-The borrowing history includes completed, cancelled, and overdue transactions and supports searching, filtering, and report generation.
+The borrowing history includes reservation, release, return, cancelled, and overdue records. Search covers borrower name, user code, school ID, item name, and item code. Filters include borrower, item/category, scheduled borrowing-start date range, status, and late-return status. Results are paginated and displayed in Philippine time. Authorized users can download a CSV containing all matching filtered records; the download uses the same access scope and filters as the page.
 
 ---
 
@@ -341,27 +342,24 @@ The borrowing history includes completed, cancelled, and overdue transactions an
 
 ```mermaid
 flowchart TD
-    A[Open Availability Calendar] --> B[Select Date / Week]
+    A[Open Availability Calendar] --> B[Select Day / Week]
 
-    B --> C[Load Equipment Schedule]
+    B --> C[Filter by Category, Equipment, and Location]
 
-    C --> D[Check Reservations]
-    D --> E[Check Active Borrowings]
-    E --> F[Check Maintenance Status]
+    C --> D[Load Matching Equipment and Schedule]
 
-    F --> G[Display Timeline]
+    D --> E[Check Approved Reservations and Active Loans]
+    E --> F[Display Reserved, Borrowed, and Overdue Times]
+    F --> G[Show Current Maintenance / Unavailable State]
 
-    G --> H{Apply Filters?}
+    G --> H{Borrower selects an open future interval?}
 
-    H -->|No| I[Display All Equipment]
-    H -->|Yes| J[Filter by Category]
-    J --> K[Filter by Equipment]
-    K --> L[Filter by Location]
-
-    L --> M[Display Filtered Timeline]
+    H -->|No| I[Continue Reviewing Schedule]
+    H -->|Yes| J[Open Reservation Form for Selected Item and Time]
+    J --> K[Recheck Eligibility and Conflicts Before Saving]
 ```
 
-The calendar provides a daily/weekly view of equipment availability, reservations, active borrowing, and maintenance status.
+The calendar is read-only; the reservation service remains responsible for final eligibility and conflict checks. Equipment location is filtered as free text stored on each item. The calendar does not show borrower identity or request purpose. Maintenance and unavailable items have no recorded schedule end date, so the calendar shows their current state without implying a repair completion time.
 
 ---
 
@@ -403,6 +401,8 @@ flowchart TD
 ```
 
 The administrator functions include account creation, bulk CSV account creation, role assignment, permission configuration, user deactivation, and equipment/category management.
+
+Bulk account creation is available from **Users & Roles → Import CSV** under WBS 15.00. An authorized active administrator uploads a UTF-8 CSV containing at most 100 accounts (1 MiB). All rows must pass validation; the complete batch, including role assignments, borrower profiles, and audit records, commits in one transaction or rolls back together. New borrower profiles start ineligible. Uploads contain initial passwords and are processed in memory without retaining the original file or including passwords in errors/audit records. See [CSV import instructions](USER_CSV_IMPORT.md) for the template and operational details.
 
 ---
 
@@ -586,6 +586,6 @@ Check Late Return
         Application Access              New Password
 ```
 
-**Important:** The password-reset URL/token mechanism is an authentication implementation detail and does **not** introduce a custom entity into the business ERD.
+**Important:** The password-reset OTP/token mechanism is an authentication implementation detail and does **not** introduce a custom entity into the business ERD.
 
 ASP.NET Core Identity stores the account in `AspNetUsers` through the `ApplicationUser` model. School-specific borrowing fields and eligibility are stored separately in `BORROWER_PROFILE`.

@@ -12,6 +12,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - **Database:** Microsoft SQL Server accessed through Entity Framework Core and `Microsoft.EntityFrameworkCore.SqlServer`.
 - **Database administration:** SQL Server Management Studio (SSMS) may be used to inspect and administer SQL Server, but SSMS is not the database engine.
 - **Authentication:** ASP.NET Core Identity with Identity roles and policy-based permissions.
+- **Password recovery:** Six-digit OTP delivery through Brevo, with Identity generating the final password-reset token after OTP verification.
 - **Styling:** Tailwind CSS compiled into a production stylesheet under `wwwroot`, plus minimal custom CSS where required.
 - **Reservation scope:** One physical equipment item per reservation in Version 1.
 
@@ -39,8 +40,12 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Administrators see management and reporting functions.
 
 #### Password Reset Request
-- A user can request an expiring ASP.NET Core Identity password-reset link using their registered email address.
-- The response must not reveal whether the address exists, and Identity validates the token before accepting a new password.
+- A user can request a six-digit OTP using their registered email address.
+- The OTP is hashed and stored in the existing ASP.NET Core Identity user-token table for ten minutes, with a maximum of five checked attempts.
+- OTP attempts are reserved atomically so concurrent requests cannot bypass the attempt limit.
+- Requests are rate-limited and resend requests use a per-account cooldown and hourly issuance cap.
+- The response must not reveal whether the address exists.
+- After successful OTP verification, ASP.NET Core Identity creates a short-lived reset token that is submitted in the reset form rather than placed in the URL.
 
 ### 3.2 Master Data Management
 
@@ -84,14 +89,16 @@ The initial release is intentionally focused on the core borrowing workflow and 
 ### 3.4 Reports and Visibility
 
 #### Borrowing History Report
-- Authorized staff can view filterable borrowing history.
-- Filters include borrower, equipment item/category, date range, transaction status, and late-return status.
-- The report supports accountability by showing request, approval, release, and return records.
+- Users with `history.view` can review reservation and loan history; borrower-role users are restricted to their own records.
+- Search covers borrower name, user code, school ID, item name, and item code. Filters include borrower, item text, category, borrowing-start date range, status, and late-return status.
+- The paginated page shows requested, scheduled, actual release, and actual return times in Philippine time, along with return condition and late days when recorded.
+- Authorized users can export all matching filtered records to CSV. The export uses the same server-side filters as the page and protects text values from spreadsheet formula injection.
 
 #### Availability Calendar
-- Users can view a daily or weekly calendar of equipment availability.
-- The calendar distinguishes available, reserved, borrowed, and under-maintenance items.
-- It helps borrowers select dates that do not conflict with existing reservations.
+- Users with `equipment.browse` can view a daily or weekly calendar filtered by category, equipment item, and its free-text location.
+- The calendar displays approved reservations, active loans, and overdue loans in Philippine time; it shows current maintenance/unavailable state in the equipment list without inventing a repair date.
+- Select an equipment item to see its schedule. Borrowers with `reservation.create` can select an open future interval to continue to the existing reservation form; the reservation service rechecks eligibility and conflicts before saving.
+- Calendar results contain schedule and equipment details only, never another borrower's identity or request purpose.
 
 ### 3.5 Administration
 
@@ -99,6 +106,10 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Administrators create, edit, activate/deactivate, and assign roles to user accounts.
 - Roles control which dashboard, pages, actions, and data each user can access.
 - Deactivating an account prevents login while retaining transaction history for audit purposes.
+- The Users & Roles page provides searchable, filterable, paginated accounts and a role-to-permission matrix.
+- New accounts use ASP.NET Core Identity; borrower-profile fields are stored separately and borrower eligibility starts disabled.
+- Current database authority is checked on administrative writes; self-deactivation, self-demotion from Administrator, and removal of the last active Administrator are blocked.
+- Account, role, permission, and activation changes are recorded with actor and timestamp; secrets are excluded from the audit record.
 
 ## 4. Core Workflow
 
@@ -124,6 +135,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Only active, eligible borrowers may create reservations.
 - A reservation requires an available item and a valid return date/time after its release date/time.
 - One item cannot have overlapping approved reservations or active loans.
+- Inventory edits/archives and reservation creation/approval must coordinate through the same per-equipment SQL Server lock. Each workflow must use a `SERIALIZABLE` transaction, acquire the equipment-row lock before checking reservation state, then validate and write before committing. This prevents either workflow from validating against stale inventory state.
 - Only custodians and administrators can approve, reject, release, or complete a return.
 - Equipment marked as unavailable or under maintenance cannot be reserved or released.
 - Every approval, rejection, release, return, and status change should retain the acting user and timestamp for audit history.
@@ -137,9 +149,10 @@ The initial release is intentionally focused on the core borrowing workflow and 
 | Borrower Profile | Student/faculty borrowing record | Borrower profile ID, Identity user ID, school ID, department, contact details, eligibility |
 | Identity Role / User Role | Role assignment | Identity role ID/name and user-role association |
 | Permission / Role Permission | Fine-grained authorization | Permission name and role-permission association |
+| Administration Audit Event | Administrative accountability | Actor, target account/role, action, safe before/after details, UTC timestamp |
+| Role Permission Seed | Preserve configured access | Identity role whose initial permissions have been provisioned |
 | Equipment Category | Equipment grouping | Category ID, name, active status |
-| Location | Controlled storage/facility location | Location ID, name, active status |
-| Equipment Item | Individual trackable item | Item ID/code, category, location, name/model, serial number, image URL/path, condition, operational status |
+| Equipment Item | Individual trackable item | Item ID/code, category, free-text `VARCHAR(200)` location, name/model, serial number, image URL/path, condition, operational status |
 | Reservation | Requested schedule for exactly one item | Reservation ID, borrower profile, equipment item, purpose, requested release/return dates, status, reviewer |
 | Release Record | Confirmation of handover | Release ID, reservation, custodian, actual release time, notes |
 | Return Record | Confirmation of return and inspection | Return ID, release/reservation, custodian, actual return time, condition, notes |
@@ -164,4 +177,4 @@ The initial release is intentionally focused on the core borrowing workflow and 
 
 ## 9. Scope for the First Website Version
 
-The first website should implement these functions with ASP.NET Core MVC and Razor Views, a responsive Tailwind CSS interface, role/permission-protected access, and a SQL Server-backed audit trail. Out of scope unless later requested: online payment/penalties, external school-information-system synchronization, barcode scanning, SMS notifications, and multi-campus inventory transfers. Password-reset email through the approved school SMTP server remains in scope.
+The first website should implement these functions with ASP.NET Core MVC and Razor Views, a responsive Tailwind CSS interface, role/permission-protected access, and a SQL Server-backed audit trail. Out of scope unless later requested: online payment/penalties, external school-information-system synchronization, barcode scanning, SMS notifications, and multi-campus inventory transfers. Password-reset OTP delivery through Brevo remains in scope.

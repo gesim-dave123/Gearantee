@@ -1,5 +1,6 @@
-using ASI.Basecode.Data;
+﻿using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.WebApp.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +33,9 @@ namespace ASI.Basecode.WebApp
                 })
                 .AddEntityFrameworkStores<AsiBasecodeDBContext>()
                 .AddDefaultTokenProviders();
+
+            _services.Configure<DataProtectionTokenProviderOptions>(options =>
+                options.TokenLifespan = TimeSpan.FromMinutes(15));
 
             _services.Configure<SecurityStampValidatorOptions>(options =>
                 options.ValidationInterval = TimeSpan.FromMinutes(1));

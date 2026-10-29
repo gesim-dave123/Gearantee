@@ -2,9 +2,9 @@ name: Gearantee CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: ['**']
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 # Cancel an older run when new commits are pushed to the same PR or branch.
@@ -33,6 +33,22 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ASI.Basecode.WebApp/package-lock.json
+
+      - name: Build Tailwind and calendar assets
+        working-directory: ASI.Basecode.WebApp
+        run: |
+          npm ci
+          npm run assets:build
+
+      - name: Verify generated assets are current
+        run: git diff --ignore-space-at-eol --exit-code -- ASI.Basecode.WebApp/wwwroot/css/app.css ASI.Basecode.WebApp/wwwroot/lib/fullcalendar
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -67,9 +83,8 @@ jobs:
             exit 1
           }
 
-      # Enable when a test project exists (for example, ASI.Basecode.Tests).
-      # - name: Test
-      #   run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release
 
   codeql:
     name: CodeQL security scan

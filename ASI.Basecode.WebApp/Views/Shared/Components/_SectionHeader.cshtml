@@ -1,0 +1,8 @@
+@model string
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 pb-3">
+    <h2 class="font-display text-xl font-semibold text-ink">@Model</h2>
+    @if (ViewData["SectionMeta"] is string sectionMeta)
+    {
+        <p class="text-xs text-gray-500">@sectionMeta</p>
+    }
+</div>

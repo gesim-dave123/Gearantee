@@ -49,7 +49,7 @@ These roles are seeded as ASP.NET Core Identity roles.
 | Manage users, roles, and permissions |  |  | ✓ |
 | View borrowing history report |  | ✓ | ✓ |
 
-The matrix is an administrative interface over `ROLE_PERMISSION`.
+The matrix is an administrative interface over `RolePermission`. Only an active administrator with the current `user_role.manage` grant may open it or save changes. That grant is locked to the Administrator role so administrators cannot remove their own management capability.
 
 ## 4. Canonical Database Structure
 
@@ -59,6 +59,8 @@ erDiagram
     IDENTITY_ROLE ||--o{ USER_ROLE : contains
     IDENTITY_ROLE ||--o{ ROLE_PERMISSION : grants
     PERMISSION ||--o{ ROLE_PERMISSION : assigned_through
+    IDENTITY_ROLE ||--o| ROLE_PERMISSION_SEED : defaults_initialized
+    APPLICATION_USER ||--o{ ADMINISTRATION_AUDIT_EVENT : acts
     APPLICATION_USER ||--o| BORROWER_PROFILE : has
 
     APPLICATION_USER {
@@ -87,6 +89,20 @@ erDiagram
     ROLE_PERMISSION {
         nvarchar role_id PK, FK
         bigint permission_id PK, FK
+    }
+
+    ROLE_PERMISSION_SEED {
+        nvarchar role_id PK, FK
+    }
+
+    ADMINISTRATION_AUDIT_EVENT {
+        bigint audit_id PK
+        nvarchar actor_user_id FK
+        nvarchar target_user_id FK
+        nvarchar target_role_id FK
+        nvarchar action
+        nvarchar details_json
+        datetime2 occurred_at
     }
 
     BORROWER_PROFILE {
@@ -209,6 +225,10 @@ The service layer must still validate reservation status, schedule conflicts, an
 8. The controller authorization policy checks the permission.
 9. The business service validates the operation.
 10. The system allows the action or returns an appropriate denial/error.
+
+For user and role administration, sensitive writes re-check the acting user's active status, Administrator membership, and the current database-backed `user_role.manage` grant inside the transaction. This avoids trusting a permission claim that may still be present in a sign-in cookie. Role, profile, and permission changes are audited with actor and UTC timestamp; passwords and reset tokens are never written to the audit record. Administrative writes are serialized in SQL Server, stale forms are rejected using Identity concurrency stamps, users cannot deactivate themselves or remove their own Administrator role, and the last active Administrator cannot be demoted or deactivated. Deactivation sets `ApplicationUser.IsActive` to false rather than deleting the account, preserving borrowing history.
+
+Initial role grants are seeded once. `RolePermissionSeed` records that initialization so rerunning `--seed` does not restore permissions an administrator intentionally removed. The migration marks existing roles that already have permission assignments as initialized; roles without any grants receive the documented defaults on the next seed run.
 
 ## Summary
 

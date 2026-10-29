@@ -1,16 +1,22 @@
-using ASI.Basecode.Data;
-using ASI.Basecode.Data.Models;
+﻿using ASI.Basecode.Data.Models;
+using ASI.Basecode.Resources.Constants;
 using ASI.Basecode.WebApp.Models;
+using ASI.Basecode.Services.Interfaces;
+using ASI.Basecode.Services.ServiceModels.Account;
+using ASI.Basecode.Services.Services;
 using ASI.Basecode.WebApp.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace ASI.Basecode.WebApp.Controllers
@@ -22,14 +28,19 @@ namespace ASI.Basecode.WebApp.Controllers
 
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly AsiBasecodeDBContext _dbContext;
+        private readonly IAccountService _accountService;
+        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+        private readonly IPasswordResetOtpService _passwordResetOtpService;
+
+        private const string PasswordResetGenericMessage =
+            "The verification code is invalid or has expired.";
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RoleManager<IdentityRole> roleManager,
-            AsiBasecodeDBContext dbContext,
+            IAccountService accountService,
+            IPasswordHasher<ApplicationUser> passwordHasher,
+            IPasswordResetOtpService passwordResetOtpService,
             IHttpContextAccessor httpContextAccessor,
             ILoggerFactory loggerFactory,
             IConfiguration configuration)
@@ -40,8 +51,9 @@ namespace ASI.Basecode.WebApp.Controllers
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _roleManager = roleManager;
-            _dbContext = dbContext;
+            _accountService = accountService;
+            _passwordHasher = passwordHasher;
+            _passwordResetOtpService = passwordResetOtpService;
         }
 
         [HttpGet]
@@ -50,7 +62,7 @@ namespace ASI.Basecode.WebApp.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Dashboard");
             }
 
             ViewData["ReturnUrl"] = returnUrl;
@@ -67,6 +79,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(PasswordResetOtpService.RequestRateLimitPolicyName)]
         public async Task<IActionResult> ForgotPassword(
             ForgotPasswordViewModel model)
         {
@@ -79,9 +92,10 @@ namespace ASI.Basecode.WebApp.Controllers
             var user = await _userManager.FindByEmailAsync(email);
             if (user != null && user.IsActive)
             {
-                _logger.LogInformation(
-                    "Password reset requested for user {UserCode}.",
-                    user.UserCode);
+                // Anti-enumeration: the response is identical whether or not the
+                // account exists; the service handles reservation, storage, email,
+                // and failure rollback internally.
+                await _passwordResetOtpService.IssueOtpAsync(user, email);
             }
 
             TempData["PasswordResetEmail"] = email;
@@ -98,7 +112,149 @@ namespace ASI.Basecode.WebApp.Controllers
                 return RedirectToAction(nameof(ForgotPassword));
             }
 
-            return View(new ForgotPasswordViewModel { Email = email });
+            return View(new VerifyPasswordResetOtpViewModel { Email = email });
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting(PasswordResetOtpService.VerifyRateLimitPolicyName)]
+        public async Task<IActionResult> VerifyPasswordResetOtp(
+            VerifyPasswordResetOtpViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
+
+            var email = model.Email.Trim();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null || !user.IsActive)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    PasswordResetGenericMessage);
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
+
+            var reservation = await _passwordResetOtpService
+                .TryReserveAttemptAsync(user.Id, DateTimeOffset.UtcNow);
+            if (!reservation.IsReserved)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    reservation.Status == PasswordResetOtpAttemptStatus.TooManyAttempts
+                        ? "Too many attempts. Request a new verification code."
+                        : PasswordResetGenericMessage);
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
+
+            var verificationResult = _passwordHasher.VerifyHashedPassword(
+                user,
+                reservation.State.OtpHash,
+                model.Otp.Trim());
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                if (reservation.State.Attempts >=
+                    PasswordResetOtpService.MaximumAttempts)
+                {
+                    if (!await _passwordResetOtpService.TryConsumeAsync(
+                            user.Id,
+                            reservation.ReservedValue))
+                    {
+                        _logger.LogWarning(
+                            "Unable to consume an exhausted password reset OTP for user {UserCode}.",
+                            user.UserCode);
+                    }
+                }
+
+                ModelState.AddModelError(
+                    string.Empty,
+                    reservation.State.Attempts >=
+                        PasswordResetOtpService.MaximumAttempts
+                        ? "Too many attempts. Request a new verification code."
+                        : PasswordResetGenericMessage);
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
+
+            if (!await _passwordResetOtpService.TryConsumeAsync(
+                    user.Id,
+                    reservation.ReservedValue))
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    PasswordResetGenericMessage);
+                return View(nameof(ForgotPasswordCheckInbox), model);
+            }
+
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            return View(
+                nameof(ResetPassword),
+                new ResetPasswordViewModel
+                {
+                    UserId = user.Id,
+                    Token = resetToken
+                });
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPassword()
+        {
+            return RedirectToAction(nameof(ForgotPassword));
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null || !user.IsActive)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This password-reset session is invalid or has expired.");
+                return View(model);
+            }
+
+            var result = await _userManager.ResetPasswordAsync(
+                user,
+                model.Token,
+                model.Password);
+            if (!result.Succeeded)
+            {
+                AddIdentityErrors(result);
+                return View(model);
+            }
+
+            var resetFailedAccessResult =
+                await _userManager.ResetAccessFailedCountAsync(user);
+            if (!resetFailedAccessResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Password reset succeeded but failed to clear the failed-login count for user {UserCode}.",
+                    user.UserCode);
+            }
+
+            var clearLockoutResult = await _userManager.SetLockoutEndDateAsync(
+                user,
+                null);
+            if (!clearLockoutResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Password reset succeeded but failed to clear lockout for user {UserCode}.",
+                    user.UserCode);
+            }
+
+            TempData["SuccessMessage"] =
+                "Your password was reset. You can now sign in with your new password.";
+            return RedirectToAction(nameof(Login));
         }
 
         [HttpPost]
@@ -156,7 +312,7 @@ namespace ASI.Basecode.WebApp.Controllers
                 return LocalRedirect(returnUrl);
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Index", "Dashboard");
         }
 
         [HttpGet]
@@ -176,76 +332,26 @@ namespace ASI.Basecode.WebApp.Controllers
                 return View(model);
             }
 
-            if (await _userManager.FindByEmailAsync(model.Email) != null ||
-                await _userManager.Users.AnyAsync(x =>
-                    x.UserCode == model.UserCode))
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "An account with that email or user code already exists.");
-                return View(model);
-            }
-
-            await using var transaction =
-                await _dbContext.Database.BeginTransactionAsync();
-
-            var user = new ApplicationUser
-            {
-                UserName = model.UserCode,
-                UserCode = model.UserCode,
-                Email = model.Email,
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            var createResult = await _userManager.CreateAsync(
-                user,
-                model.Password);
-            if (!createResult.Succeeded)
-            {
-                AddIdentityErrors(createResult);
-                await transaction.RollbackAsync();
-                return View(model);
-            }
-
-            if (!await _roleManager.RoleExistsAsync(
-                DomainValues.Roles.Borrower))
-            {
-                var createRoleResult = await _roleManager.CreateAsync(
-                    new IdentityRole(DomainValues.Roles.Borrower));
-                if (!createRoleResult.Succeeded)
+            var result = await _accountService.RegisterBorrowerAsync(
+                new RegisterAccountRequest
                 {
-                    AddIdentityErrors(createRoleResult);
-                    await transaction.RollbackAsync();
-                    return View(model);
-                }
-            }
+                    UserCode = model.UserCode,
+                    Email = model.Email,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    Password = model.Password,
+                    Department = model.Department,
+                    ContactNumber = model.ContactNumber
+                });
 
-            var roleResult = await _userManager.AddToRoleAsync(
-                user,
-                DomainValues.Roles.Borrower);
-            if (!roleResult.Succeeded)
+            if (!result.Succeeded)
             {
-                AddIdentityErrors(roleResult);
-                await transaction.RollbackAsync();
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error);
+                }
                 return View(model);
             }
-
-            _dbContext.BorrowerProfiles.Add(new BorrowerProfile
-            {
-                UserId = user.Id,
-                SchoolId = model.UserCode,
-                Department = model.Department,
-                ContactNumber = model.ContactNumber,
-                IsEligible = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-            await _dbContext.SaveChangesAsync();
-            await transaction.CommitAsync();
 
             TempData["SuccessMessage"] =
                 "Account created. An administrator must confirm borrowing eligibility.";
@@ -277,5 +383,6 @@ namespace ASI.Basecode.WebApp.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
         }
+
     }
 }

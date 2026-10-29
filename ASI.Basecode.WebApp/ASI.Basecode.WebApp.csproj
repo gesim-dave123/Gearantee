@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <TypeScriptToolsVersion>4.4</TypeScriptToolsVersion>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
     <UserSecretsId>872bac6a-ed64-4226-a559-064bd37b166e</UserSecretsId>
   </PropertyGroup>
 
@@ -29,7 +30,7 @@
     <PackageReference Include="NuGet.Protocol" Version="6.12.5">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.20">
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.21">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

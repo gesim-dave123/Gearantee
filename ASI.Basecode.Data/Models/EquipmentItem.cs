@@ -7,7 +7,7 @@ namespace ASI.Basecode.Data.Models
     {
         public long EquipmentId { get; set; }
         public long CategoryId { get; set; }
-        public long LocationId { get; set; }
+        public string Location { get; set; }
         public string ItemCode { get; set; }
         public string ItemName { get; set; }
         public string Description { get; set; }
@@ -22,7 +22,6 @@ namespace ASI.Basecode.Data.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public EquipmentCategory Category { get; set; }
-        public Location Location { get; set; }
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
     }
 }
